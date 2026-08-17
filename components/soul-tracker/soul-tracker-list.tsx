@@ -135,7 +135,7 @@ export function SoulTrackerList() {
                         variant="ghost"
                         size="sm"
                         render={
-                          <Link href={`/dashboard/soul-tracker/${item.id}`} />
+                          <Link href={`/admin/soul-tracker/${item.id}`} />
                         }
                       >
                         Open
