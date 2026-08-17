@@ -6,9 +6,12 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import type { Member } from "@/lib/db/types"
 
+import { UsersIcon } from "lucide-react"
+
 import { MemberFormSheet } from "@/components/members/member-form-sheet"
 import { EmptyState } from "@/components/shared/empty-state"
 import { PageHeader } from "@/components/shared/page-header"
+import { QuerySection, TableSkeleton } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -148,74 +151,96 @@ export function MembersView({ role }: { role: Role }) {
           </SelectContent>
         </Select>
       </div>
-      {query.data?.items.length ? (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Member ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Chapel</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {query.data.items.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.memberCode}</TableCell>
-                  <TableCell>
-                    {member.firstName} {member.lastName}
-                  </TableCell>
-                  <TableCell>{member.phone}</TableCell>
-                  <TableCell>
-                    <StatusBadge value={member.chapel} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge value={member.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" render={<Link href={`/members/${member.id}`} />}>
-                      View
-                    </Button>
-                  </TableCell>
+      <QuerySection
+        isPending={query.isPending}
+        isError={query.isError}
+        isFetching={query.isFetching}
+        error={query.error}
+        onRetry={() => query.refetch()}
+        hasData={Boolean(query.data)}
+        skeleton={<TableSkeleton columns={6} />}
+      >
+        {query.data?.items.length ? (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Member ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Chapel</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground">
-            <span>
-              {(query.data.page - 1) * query.data.pageSize + 1}-
-              {Math.min(query.data.page * query.data.pageSize, query.data.total)} of{" "}
-              {query.data.total}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage((value) => value - 1)}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page * 10 >= query.data.total}
-                onClick={() => setPage((value) => value + 1)}
-              >
-                Next
-              </Button>
+              </TableHeader>
+              <TableBody>
+                {query.data.items.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">
+                      {member.memberCode}
+                    </TableCell>
+                    <TableCell>
+                      {member.firstName} {member.lastName}
+                    </TableCell>
+                    <TableCell>{member.phone}</TableCell>
+                    <TableCell>
+                      <StatusBadge value={member.chapel} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge value={member.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        render={
+                          <Link href={`/dashboard/members/${member.id}`} />
+                        }
+                      >
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground">
+              <span>
+                {(query.data.page - 1) * query.data.pageSize + 1}-
+                {Math.min(
+                  query.data.page * query.data.pageSize,
+                  query.data.total
+                )}{" "}
+                of {query.data.total}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setPage((value) => value - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page * 10 >= query.data.total}
+                  onClick={() => setPage((value) => value + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <EmptyState
-          title="No members yet"
-          description="Register a member to start building the Yaba directory."
-        />
-      )}
+        ) : (
+          <EmptyState
+            title="No members yet"
+            description="Register a member to start building the Yaba directory."
+            icon={UsersIcon}
+          />
+        )}
+      </QuerySection>
       <MemberFormSheet
         open={open}
         onOpenChange={setOpen}
