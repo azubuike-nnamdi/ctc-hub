@@ -3,15 +3,15 @@ import { AppSidebar } from "@/components/layout/app-sidebar"
 import { BreadcrumbLabelProvider } from "@/components/layout/breadcrumb-label-provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { prisma } from "@/lib/db/prisma"
-import { requireUser } from "@/lib/auth/session"
+import { requireStaffUser } from "@/lib/auth/session"
 import { resolveBranchId } from "@/lib/auth/branch"
 
-export default async function DashboardGroupLayout({
+export default async function AdminGroupLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const user = await requireUser()
+  const user = await requireStaffUser()
   const branchId = await resolveBranchId(user)
   const branches =
     user.role === "SUPER_ADMIN"
