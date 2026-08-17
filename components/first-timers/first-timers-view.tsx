@@ -15,8 +15,10 @@ import { PageHeader } from "@/components/shared/page-header"
 import { QuerySection, TableSkeleton } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -62,6 +64,14 @@ type ListResponse = {
   total: number
 }
 
+type StatsResponse = {
+  total: number
+  new: number
+  inFollowUp: number
+  treasureHunt: number
+  thisMonth: number
+}
+
 export function FirstTimersView({
   role,
   publicFormPath,
@@ -85,6 +95,11 @@ export function FirstTimersView({
     if (status !== "ALL") search.set("status", status)
     return search.toString()
   }, [q, status, page])
+
+  const statsQuery = useQuery({
+    queryKey: ["first-timers", "stats"],
+    queryFn: () => api<StatsResponse>("/api/first-timers/stats"),
+  })
 
   const query = useQuery({
     queryKey: ["first-timers", params],
@@ -171,6 +186,35 @@ export function FirstTimersView({
             : undefined
         }
       />
+      <QuerySection
+        isPending={statsQuery.isPending}
+        isError={statsQuery.isError}
+        isFetching={statsQuery.isFetching}
+        error={statsQuery.error}
+        onRetry={() => statsQuery.refetch()}
+        hasData={Boolean(statsQuery.data)}
+        skeleton={<StatsSkeleton />}
+      >
+        <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <StatCard
+            label="Total first timers"
+            value={statsQuery.data?.total ?? 0}
+          />
+          <StatCard label="New" value={statsQuery.data?.new ?? 0} />
+          <StatCard
+            label="In follow-up"
+            value={statsQuery.data?.inFollowUp ?? 0}
+          />
+          <StatCard
+            label="Treasure Hunt"
+            value={statsQuery.data?.treasureHunt ?? 0}
+          />
+          <StatCard
+            label="Registered this month"
+            value={statsQuery.data?.thisMonth ?? 0}
+          />
+        </div>
+      </QuerySection>
       <div className="mb-4 flex flex-wrap gap-2">
         <Input
           placeholder="Search visitors"
@@ -496,6 +540,32 @@ function Detail({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd>{value}</dd>
+    </div>
+  )
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <p className="text-3xl font-semibold">{value.toLocaleString()}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{label}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function StatsSkeleton() {
+  return (
+    <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Card key={index}>
+          <CardContent className="pt-6">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="mt-3 h-4 w-28" />
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }
