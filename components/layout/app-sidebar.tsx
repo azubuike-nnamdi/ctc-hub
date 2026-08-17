@@ -27,6 +27,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { can, type Action, type Role } from "@/lib/auth/rbac"
+import { APP_VERSION } from "@/lib/app-version"
 
 const navItems: {
   href: string
@@ -34,38 +35,38 @@ const navItems: {
   icon: typeof LayoutDashboardIcon
   action?: Action
 }[] = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
-    {
-      href: "/members",
-      label: "Members",
-      icon: UsersIcon,
-      action: "members:read",
-    },
-    {
-      href: "/first-timers",
-      label: "First Timers",
-      icon: UserRoundIcon,
-      action: "first-timers:read",
-    },
-    {
-      href: "/soul-tracker",
-      label: "Soul Tracker",
-      icon: WaypointsIcon,
-      action: "soul-tracker:read",
-    },
-    {
-      href: "/events",
-      label: "Events",
-      icon: CalendarDaysIcon,
-      action: "events:read",
-    },
-    {
-      href: "/settings",
-      label: "Settings",
-      icon: SettingsIcon,
-      action: "settings:profile",
-    },
-  ]
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
+  {
+    href: "/dashboard/members",
+    label: "Members",
+    icon: UsersIcon,
+    action: "members:read",
+  },
+  {
+    href: "/dashboard/first-timers",
+    label: "First Timers",
+    icon: UserRoundIcon,
+    action: "first-timers:read",
+  },
+  {
+    href: "/dashboard/soul-tracker",
+    label: "Soul Tracker",
+    icon: WaypointsIcon,
+    action: "soul-tracker:read",
+  },
+  {
+    href: "/dashboard/events",
+    label: "Events",
+    icon: CalendarDaysIcon,
+    action: "events:read",
+  },
+  {
+    href: "/dashboard/settings",
+    label: "Settings",
+    icon: SettingsIcon,
+    action: "settings:profile",
+  },
+]
 
 export function AppSidebar({ role }: { role: Role }) {
   const pathname = usePathname()
@@ -74,7 +75,14 @@ export function AppSidebar({ role }: { role: Role }) {
     <Sidebar>
       <SidebarHeader className="px-4 py-4">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <Image src="/img/ctc-logo.png" alt="" width={32} height={32} className="size-8" unoptimized />
+          <Image
+            src="/img/ctc-logo.png"
+            alt=""
+            width={32}
+            height={32}
+            className="size-8"
+            unoptimized
+          />
           <div className="leading-tight">
             <p className="text-sm font-semibold">CTC Hub</p>
             <p className="text-xs text-muted-foreground">Treasure City</p>
@@ -115,6 +123,9 @@ export function AppSidebar({ role }: { role: Role }) {
           <LogOutIcon />
           Logout
         </Button>
+        <p className="px-2 pt-1 text-center text-xs text-muted-foreground">
+          CTC Hub v{APP_VERSION}
+        </p>
       </SidebarFooter>
     </Sidebar>
   )
