@@ -39,6 +39,35 @@ enum FirstTimerStatus {
   TREASURE_HUNT
 }
 
+enum AgeRange {
+  BELOW_20
+  RANGE_20_29
+  RANGE_30_39
+  ABOVE_40
+}
+
+enum MembershipInterest {
+  YES
+  NO
+  INDECISIVE
+}
+
+enum HearAboutSource {
+  FACEBOOK
+  FAMILY
+  FLYER
+  PREACHING
+  WHATSAPP
+  INSTAGRAM
+  YOUTUBE
+  GOOGLE_SEARCH
+  WEBSITE
+  EMAIL_SMS
+  TV
+  RADIO
+  OTHER
+}
+
 enum SoulStage {
   FIRST_TIMER
   FOLLOW_UP
@@ -60,6 +89,11 @@ enum FollowUpType {
   CALL
   VISIT
   NOTE
+}
+
+enum FirstTimerCreatedBy {
+  SELF
+  STAFF
 }
 
 model Organization {
@@ -108,6 +142,7 @@ model User {
 
   branch               Branch?            @relation(fields: [branchId], references: [id], onDelete: Restrict)
   assignedFirstTimers  FirstTimer[]       @relation("AssignedFollowUp")
+  createdFirstTimers   FirstTimer[]       @relation("FirstTimerCreatedBy")
   createdEvents        Event[]            @relation("EventCreator")
   followUpActivities   FollowUpActivity[]
   assignedSoulTrackers SoulTracker[]      @relation("SoulAssignedTo")
@@ -143,33 +178,43 @@ model Member {
 }
 
 model FirstTimer {
-  id            String            @id @default(cuid())
-  branchId      String
-  firstName     String
-  lastName      String
-  phone         String
-  email         String?
-  address       String?
-  gender        Gender
-  invitedBy     String?
-  eventId       String?
-  prayerRequest String?
-  registeredAt  DateTime          @default(now())
-  assignedToId  String?
-  status        FirstTimerStatus  @default(NEW)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id                   String               @id @default(cuid())
+  branchId             String
+  firstName            String
+  lastName             String
+  phone                String
+  email                String?
+  address              String?
+  gender               Gender
+  occupation           String?
+  birthday             String?
+  ageRange             AgeRange?
+  membershipInterest   MembershipInterest?
+  hearAboutUs          HearAboutSource[]    @default([])
+  hearAboutOther       String?
+  invitedBy            String?
+  eventId              String?
+  prayerRequest        String?
+  registeredAt         DateTime             @default(now())
+  assignedToId         String?
+  createdBy            FirstTimerCreatedBy @default(STAFF)
+  createdByUserId      String?
+  status               FirstTimerStatus    @default(NEW)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
-  branch      Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  event       Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  assignedTo  User?              @relation("AssignedFollowUp", fields: [assignedToId], references: [id], onDelete: SetNull)
-  soulTracker SoulTracker?
-  activities  FollowUpActivity[]
+  branch        Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  event         Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  assignedTo    User?              @relation("AssignedFollowUp", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdByUser User?              @relation("FirstTimerCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  soulTracker   SoulTracker?
+  activities    FollowUpActivity[]
 
   @@index([branchId])
   @@index([branchId, status])
   @@index([assignedToId])
   @@index([eventId])
+  @@index([createdByUserId])
 }
 
 model SoulTracker {
