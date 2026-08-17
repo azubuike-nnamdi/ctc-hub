@@ -1,6 +1,6 @@
 import { SupportForm } from "@/components/support/support-form"
+import { PublicLegalFooter } from "@/components/cookies/public-legal-footer"
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb"
-import { APP_VERSION } from "@/lib/app-version"
 import type { SupportTopic } from "@/lib/db/enums"
 import type { Metadata } from "next"
 
@@ -39,9 +39,7 @@ export default async function SupportPage({
         defaultTopic={topic}
         deletedAccount={deletedAccount}
       />
-      <p className="mt-8 text-xs text-muted-foreground">
-        CTC Hub v{APP_VERSION}
-      </p>
+      <PublicLegalFooter />
     </div>
   )
 }

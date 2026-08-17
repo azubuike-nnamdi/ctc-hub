@@ -3,6 +3,7 @@ import { GeistMono } from "geist/font/mono"
 import { GeistSans } from "geist/font/sans"
 
 import "./globals.css"
+import { CookieConsent } from "@/components/cookies/cookie-consent"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
@@ -74,8 +75,10 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <TooltipProvider>
-              {children}
-              <Toaster richColors />
+              <CookieConsent>
+                {children}
+                <Toaster richColors />
+              </CookieConsent>
             </TooltipProvider>
           </QueryProvider>
         </ThemeProvider>
