@@ -15,13 +15,17 @@ import {
 } from "@/components/ui/breadcrumb"
 
 const SEGMENT_LABELS: Record<string, string> = {
+  admin: "Admin",
   dashboard: "Dashboard",
   members: "Members",
   "first-timers": "First Timers",
   "soul-tracker": "Soul Tracker",
   events: "Events",
   settings: "Settings",
+  "log-soul": "Log Soul",
   register: "Register",
+  signup: "Sign up",
+  support: "Support",
 }
 
 function looksLikeId(segment: string) {
