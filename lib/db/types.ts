@@ -1,18 +1,26 @@
 import type {
+  AgeRange,
   Chapel,
   EventStatus,
+  FirstTimerCreatedBy,
   FirstTimerStatus,
   Gender,
+  HearAboutSource,
   MemberStatus,
+  MembershipInterest,
 } from "@/lib/db/enums"
 
 export type {
+  AgeRange,
   Chapel,
   EventStatus,
+  FirstTimerCreatedBy,
   FirstTimerStatus,
   FollowUpType,
   Gender,
+  HearAboutSource,
   MemberStatus,
+  MembershipInterest,
   Role,
   SoulStage,
 } from "@/lib/db/enums"
@@ -47,11 +55,19 @@ export type FirstTimer = {
   email: string | null
   address: string | null
   gender: Gender
+  occupation: string | null
+  birthday: string | null
+  ageRange: AgeRange | null
+  membershipInterest: MembershipInterest | null
+  hearAboutUs: HearAboutSource[]
+  hearAboutOther: string | null
   invitedBy: string | null
   eventId: string | null
   prayerRequest: string | null
   registeredAt: string
   assignedToId: string | null
+  createdBy: FirstTimerCreatedBy
+  createdByUserId: string | null
   status: FirstTimerStatus
   createdAt: string
   updatedAt: string
