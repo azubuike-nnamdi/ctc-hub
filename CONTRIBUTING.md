@@ -148,7 +148,7 @@ pnpm knip
 pnpm format
 ```
 
-5. Commit with Conventional Commits (Husky runs **lint** on pre-commit, **commitlint** on commit-msg, and **typecheck** on pre-push).
+5. Commit with Conventional Commits. Husky runs **lint** on pre-commit, **commitlint** on commit-msg, **build** and **typecheck** on pre-push, and **pnpm install** on post-merge when lockfile files change.
 
 ### Commit messages
 
