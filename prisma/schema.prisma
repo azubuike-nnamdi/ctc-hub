@@ -156,6 +156,7 @@ model User {
   assignedSoulTrackers SoulTracker[]      @relation("SoulAssignedTo")
   member               Member?
   deletedMembers       Member[]           @relation("MemberDeletedBy")
+  cookieConsents       CookieConsentLog[]
 
   @@index([branchId])
 }
@@ -354,4 +355,17 @@ model SupportRequest {
 
   @@index([email])
   @@index([topic])
+}
+
+model CookieConsentLog {
+  id         String   @id @default(cuid())
+  version    String
+  acceptedAt DateTime @default(now())
+  userId     String?
+  userAgent  String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([acceptedAt])
 }
