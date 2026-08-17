@@ -1,21 +1,32 @@
 import { auth } from "@/lib/auth/auth"
 import { NextResponse } from "next/server"
 
+function isPublicPage(path: string) {
+  return (
+    path === "/login" || path === "/register" || path.startsWith("/register/")
+  )
+}
+
+function isPublicApi(path: string, method: string) {
+  if (path.startsWith("/api/auth")) {
+    return true
+  }
+  return method === "POST" && path === "/api/public/first-timers"
+}
+
 export const proxy = auth((req) => {
   const isLoggedIn = Boolean(req.auth)
   const mustChangePassword = Boolean(req.auth?.user?.mustChangePassword)
   const path = req.nextUrl.pathname
-  const isLogin = path.startsWith("/login")
   const isResetPassword = path.startsWith("/reset-password")
-  const isAuthApi = path.startsWith("/api/auth")
   const isPasswordApi = path.startsWith("/api/users/password")
 
-  if (isAuthApi) {
+  if (isPublicApi(path, req.method)) {
     return NextResponse.next()
   }
 
   if (!isLoggedIn) {
-    if (isLogin) {
+    if (isPublicPage(path)) {
       return NextResponse.next()
     }
     if (path.startsWith("/api/")) {
@@ -40,7 +51,7 @@ export const proxy = auth((req) => {
     return NextResponse.redirect(new URL("/reset-password", req.nextUrl))
   }
 
-  if (isLogin || isResetPassword) {
+  if (path.startsWith("/login") || isResetPassword) {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl))
   }
 
