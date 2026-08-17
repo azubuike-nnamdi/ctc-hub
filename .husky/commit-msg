@@ -1,1 +1,9 @@
+#!/bin/sh
+
+echo "🔍 Running commit-msg hook..."
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" 2>/dev/null
+export PATH="$HOME/Library/pnpm:$PATH"
+
 pnpm exec commitlint --edit "$1"

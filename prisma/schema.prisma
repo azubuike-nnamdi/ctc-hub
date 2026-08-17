@@ -13,6 +13,7 @@ enum Role {
   PASTOR
   USHER
   FOLLOW_UP
+  MEMBER
 }
 
 enum Chapel {
@@ -39,6 +40,35 @@ enum FirstTimerStatus {
   TREASURE_HUNT
 }
 
+enum AgeRange {
+  BELOW_20
+  RANGE_20_29
+  RANGE_30_39
+  ABOVE_40
+}
+
+enum MembershipInterest {
+  YES
+  NO
+  INDECISIVE
+}
+
+enum HearAboutSource {
+  FACEBOOK
+  FAMILY
+  FLYER
+  PREACHING
+  WHATSAPP
+  INSTAGRAM
+  YOUTUBE
+  GOOGLE_SEARCH
+  WEBSITE
+  EMAIL_SMS
+  TV
+  RADIO
+  OTHER
+}
+
 enum SoulStage {
   FIRST_TIMER
   FOLLOW_UP
@@ -60,6 +90,17 @@ enum FollowUpType {
   CALL
   VISIT
   NOTE
+}
+
+enum SoulWinEventType {
+  PERSONAL
+  GROWTHNET
+  WINSOME
+}
+
+enum FirstTimerCreatedBy {
+  SELF
+  STAFF
 }
 
 model Organization {
@@ -86,6 +127,7 @@ model Branch {
   soulTrackers         SoulTracker[]
   followUpActivities   FollowUpActivity[]
   events               Event[]
+  soulWins             SoulWin[]
 
   @@index([organizationId])
 }
@@ -108,9 +150,12 @@ model User {
 
   branch               Branch?            @relation(fields: [branchId], references: [id], onDelete: Restrict)
   assignedFirstTimers  FirstTimer[]       @relation("AssignedFollowUp")
+  createdFirstTimers   FirstTimer[]       @relation("FirstTimerCreatedBy")
   createdEvents        Event[]            @relation("EventCreator")
   followUpActivities   FollowUpActivity[]
   assignedSoulTrackers SoulTracker[]      @relation("SoulAssignedTo")
+  member               Member?
+  deletedMembers       Member[]           @relation("MemberDeletedBy")
 
   @@index([branchId])
 }
@@ -119,6 +164,7 @@ model Member {
   id          String       @id @default(cuid())
   memberCode  String
   branchId    String
+  userId      String?      @unique
   firstName   String
   lastName    String
   phone       String
@@ -130,46 +176,64 @@ model Member {
   dateJoined  DateTime
   status      MemberStatus @default(ACTIVE)
   photoUrl    String?
+  isDeleted   Boolean      @default(false)
+  deletedAt   DateTime?
+  deletedById String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deletedBy   User?        @relation("MemberDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   soulTracker SoulTracker?
+  soulWins    SoulWin[]
 
   @@unique([branchId, memberCode])
   @@index([branchId])
   @@index([branchId, status])
   @@index([branchId, chapel])
+  @@index([isDeleted])
+  @@index([deletedById])
 }
 
 model FirstTimer {
-  id            String            @id @default(cuid())
-  branchId      String
-  firstName     String
-  lastName      String
-  phone         String
-  email         String?
-  address       String?
-  gender        Gender
-  invitedBy     String?
-  eventId       String?
-  prayerRequest String?
-  registeredAt  DateTime          @default(now())
-  assignedToId  String?
-  status        FirstTimerStatus  @default(NEW)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id                   String               @id @default(cuid())
+  branchId             String
+  firstName            String
+  lastName             String
+  phone                String
+  email                String?
+  address              String?
+  gender               Gender
+  occupation           String?
+  birthday             String?
+  ageRange             AgeRange?
+  membershipInterest   MembershipInterest?
+  hearAboutUs          HearAboutSource[]    @default([])
+  hearAboutOther       String?
+  invitedBy            String?
+  eventId              String?
+  prayerRequest        String?
+  registeredAt         DateTime             @default(now())
+  assignedToId         String?
+  createdBy            FirstTimerCreatedBy @default(STAFF)
+  createdByUserId      String?
+  status               FirstTimerStatus    @default(NEW)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
-  branch      Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  event       Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  assignedTo  User?              @relation("AssignedFollowUp", fields: [assignedToId], references: [id], onDelete: SetNull)
-  soulTracker SoulTracker?
-  activities  FollowUpActivity[]
+  branch        Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  event         Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  assignedTo    User?              @relation("AssignedFollowUp", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdByUser User?              @relation("FirstTimerCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  soulTracker   SoulTracker?
+  activities    FollowUpActivity[]
 
   @@index([branchId])
   @@index([branchId, status])
   @@index([assignedToId])
   @@index([eventId])
+  @@index([createdByUserId])
 }
 
 model SoulTracker {
@@ -248,4 +312,46 @@ model Event {
   @@index([branchId])
   @@index([branchId, status])
   @@index([branchId, startsAt])
+}
+
+model SoulWin {
+  id        String           @id @default(cuid())
+  branchId  String
+  memberId  String
+  firstName String
+  lastName  String
+  phone     String
+  email     String?
+  eventType SoulWinEventType
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@index([memberId])
+  @@index([memberId, createdAt])
+}
+
+enum SupportTopic {
+  ACCOUNT_DELETED
+  SIGN_IN
+  PASSWORD
+  PROFILE
+  OTHER
+}
+
+model SupportRequest {
+  id        String       @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  topic     SupportTopic
+  message   String
+  createdAt DateTime     @default(now())
+
+  @@index([email])
+  @@index([topic])
 }

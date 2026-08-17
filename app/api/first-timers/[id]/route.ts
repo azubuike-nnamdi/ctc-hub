@@ -1,4 +1,9 @@
-import { emptyToNull, handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
+import {
+  emptyToNull,
+  handleRouteError,
+  jsonError,
+  jsonOk,
+} from "@/lib/api/errors"
 import { can } from "@/lib/auth/rbac"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
@@ -49,7 +54,10 @@ export async function PATCH(request: Request, { params }: Params) {
 
     const body = await request.json()
     if (body.status && !body.firstName) {
-      if (!can(user.role, "first-timers:follow-up") && !can(user.role, "first-timers:create")) {
+      if (
+        !can(user.role, "first-timers:follow-up") &&
+        !can(user.role, "first-timers:create")
+      ) {
         return jsonError("You cannot update follow-up status.", 403)
       }
       if (user.role === "USHER") {
@@ -69,7 +77,11 @@ export async function PATCH(request: Request, { params }: Params) {
       return jsonOk(updated)
     }
 
-    if (!can(user.role, "first-timers:create") || user.role === "USHER" || user.role === "FOLLOW_UP") {
+    if (
+      !can(user.role, "first-timers:create") ||
+      user.role === "USHER" ||
+      user.role === "FOLLOW_UP"
+    ) {
       if (!can(user.role, "first-timers:follow-up")) {
         return jsonError("You cannot edit this first timer.", 403)
       }
@@ -85,6 +97,14 @@ export async function PATCH(request: Request, { params }: Params) {
         email: emptyToNull(data.email),
         address: emptyToNull(data.address),
         gender: data.gender,
+        occupation: emptyToNull(data.occupation),
+        birthday: emptyToNull(data.birthday),
+        ageRange: data.ageRange,
+        membershipInterest: data.membershipInterest,
+        hearAboutUs: data.hearAboutUs,
+        hearAboutOther: data.hearAboutUs.includes("OTHER")
+          ? emptyToNull(data.hearAboutOther)
+          : null,
         invitedBy: emptyToNull(data.invitedBy),
         eventId: emptyToNull(data.eventId),
         prayerRequest: emptyToNull(data.prayerRequest),

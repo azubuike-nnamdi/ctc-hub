@@ -1,8 +1,12 @@
 import { compare } from "bcryptjs"
-import NextAuth from "next-auth"
+import NextAuth, { CredentialsSignin } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/db/prisma"
 import { loginSchema } from "@/lib/validation/schemas"
+
+class DeletedAccountError extends CredentialsSignin {
+  code = "deleted_account"
+}
 
 const attempts = new Map<string, { count: number; resetAt: number }>()
 
@@ -49,14 +53,25 @@ export const { handlers, auth } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email },
+          include: {
+            member: { select: { isDeleted: true } },
+          },
         })
 
-        if (!user || !user.isActive) {
+        if (!user) {
           return null
         }
 
         const valid = await compare(parsed.data.password, user.passwordHash)
         if (!valid) {
+          return null
+        }
+
+        if (user.member?.isDeleted) {
+          throw new DeletedAccountError()
+        }
+
+        if (!user.isActive) {
           return null
         }
 

@@ -1,8 +1,9 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { signIn } from "next-auth/react"
+import { getSession, signIn } from "next-auth/react"
 import Image from "next/image"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
@@ -20,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { loginSchema } from "@/lib/validation/schemas"
+import { homePathForRole } from "@/lib/auth/rbac"
 
 type LoginValues = z.infer<typeof loginSchema>
 
@@ -38,6 +40,13 @@ export function LoginForm() {
     })
 
     if (result?.error) {
+      const code = "code" in result ? String(result.code ?? "") : ""
+      if (code === "deleted_account" || result.error === "deleted_account") {
+        router.push(
+          `/support?reason=deleted&email=${encodeURIComponent(values.email)}`
+        )
+        return
+      }
       toast.error(
         result.error === "CredentialsSignin"
           ? "Invalid email or password."
@@ -46,7 +55,9 @@ export function LoginForm() {
       return
     }
 
-    router.push("/dashboard")
+    const session = await getSession()
+    const role = session?.user?.role
+    router.push(role ? homePathForRole(role) : "/login")
     router.refresh()
   }
 
@@ -61,9 +72,7 @@ export function LoginForm() {
           unoptimized
         />
         <CardTitle className="text-3xl">Welcome back</CardTitle>
-        <CardDescription>
-          Please enter your details to sign in.
-        </CardDescription>
+        <CardDescription>Please enter your details to sign in.</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
@@ -106,6 +115,12 @@ export function LoginForm() {
           >
             Sign In
           </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            New member?{" "}
+            <Link href="/signup" className="font-medium text-primary">
+              Sign up
+            </Link>
+          </p>
         </form>
       </CardContent>
     </Card>

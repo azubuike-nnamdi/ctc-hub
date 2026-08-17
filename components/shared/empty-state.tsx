@@ -1,18 +1,40 @@
-import { Card, CardContent } from "@/components/ui/card"
+import type { LucideIcon } from "lucide-react"
+import { InboxIcon } from "lucide-react"
+import type { ReactNode } from "react"
+
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { cn } from "@/lib/utils"
 
 export function EmptyState({
   title,
   description,
+  icon: Icon = InboxIcon,
+  className,
+  children,
 }: {
   title: string
   description: string
+  icon?: LucideIcon
+  className?: string
+  children?: ReactNode
 }) {
   return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <p className="font-medium">{title}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      </CardContent>
-    </Card>
+    <Empty className={cn("border", className)}>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Icon />
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
+      {children ? <EmptyContent>{children}</EmptyContent> : null}
+    </Empty>
   )
 }

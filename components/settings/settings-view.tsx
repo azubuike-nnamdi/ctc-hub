@@ -7,9 +7,12 @@ import { toast } from "sonner"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
+import { UsersIcon } from "lucide-react"
+
 import { OnboardUserSheet } from "@/components/settings/onboard-user-sheet"
 import { EmptyState } from "@/components/shared/empty-state"
 import { PageHeader } from "@/components/shared/page-header"
+import { QuerySection, TableSkeleton } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -22,7 +25,6 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -37,7 +39,6 @@ import { fullName, initials } from "@/lib/utils/labels"
 import { profileUpdateSchema } from "@/lib/validation/schemas"
 
 const PAGE_SIZE = 10
-const STAFF_COLUMNS = 9
 
 type UserRow = {
   id: string
@@ -95,37 +96,6 @@ function ActivityTile({
         {formatStamp(value) ?? "Never"}
       </p>
     </div>
-  )
-}
-
-function StaffTableSkeleton() {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Branch</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Created</TableHead>
-          <TableHead>Last login</TableHead>
-          <TableHead>Password reset</TableHead>
-          <TableHead>Password updated</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 6 }).map((_, index) => (
-          <TableRow key={index}>
-            {Array.from({ length: STAFF_COLUMNS }).map((__, cell) => (
-              <TableCell key={cell}>
-                <Skeleton className="h-4 w-24" />
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
   )
 }
 
@@ -300,111 +270,118 @@ export function SettingsView({
             />
           </div>
 
-          {users.isPending && !users.data ? (
-            <div className="rounded-lg border">
-              <StaffTableSkeleton />
-            </div>
-          ) : users.data?.items.length ? (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Branch</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Last login</TableHead>
-                    <TableHead>Password reset</TableHead>
-                    <TableHead>Password updated</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.data.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar size="sm">
-                            <AvatarFallback>
-                              {initials(item.firstName, item.lastName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">
-                            {fullName(item.firstName, item.lastName)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {item.email}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge value={item.role} />
-                      </TableCell>
-                      <TableCell>
-                        {item.branch?.name ?? "All branches"}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          value={
-                            item.mustChangePassword
-                              ? "PENDING_RESET"
-                              : item.isActive
-                                ? "ACTIVE"
-                                : "INACTIVE"
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <DateCell value={item.createdAt} />
-                      </TableCell>
-                      <TableCell>
-                        <DateCell value={item.lastLoginAt} />
-                      </TableCell>
-                      <TableCell>
-                        <DateCell value={item.passwordResetAt} />
-                      </TableCell>
-                      <TableCell>
-                        <DateCell value={item.passwordChangedAt} />
-                      </TableCell>
+          <QuerySection
+            isPending={users.isPending}
+            isError={users.isError}
+            isFetching={users.isFetching}
+            error={users.error}
+            onRetry={() => users.refetch()}
+            hasData={Boolean(users.data)}
+            skeleton={<TableSkeleton columns={9} />}
+          >
+            {users.data?.items.length ? (
+              <div className="rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Last login</TableHead>
+                      <TableHead>Password reset</TableHead>
+                      <TableHead>Password updated</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground">
-                <span>
-                  {from}-{to} of {total}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page === 1}
-                    onClick={() => setPage((value) => value - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page * PAGE_SIZE >= total}
-                    onClick={() => setPage((value) => value + 1)}
-                  >
-                    Next
-                  </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {users.data.items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <Avatar size="sm">
+                              <AvatarFallback>
+                                {initials(item.firstName, item.lastName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">
+                              {fullName(item.firstName, item.lastName)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {item.email}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge value={item.role} />
+                        </TableCell>
+                        <TableCell>
+                          {item.branch?.name ?? "All branches"}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            value={
+                              item.mustChangePassword
+                                ? "PENDING_RESET"
+                                : item.isActive
+                                  ? "ACTIVE"
+                                  : "INACTIVE"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <DateCell value={item.createdAt} />
+                        </TableCell>
+                        <TableCell>
+                          <DateCell value={item.lastLoginAt} />
+                        </TableCell>
+                        <TableCell>
+                          <DateCell value={item.passwordResetAt} />
+                        </TableCell>
+                        <TableCell>
+                          <DateCell value={item.passwordChangedAt} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground">
+                  <span>
+                    {from}-{to} of {total}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page === 1}
+                      onClick={() => setPage((value) => value - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page * PAGE_SIZE >= total}
+                      onClick={() => setPage((value) => value + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <EmptyState
-              title="No staff accounts"
-              description={
-                q
-                  ? "No staff match that search."
-                  : "Onboard staff to give them access to CTC Hub."
-              }
-            />
-          )}
+            ) : (
+              <EmptyState
+                title="No staff accounts"
+                description={
+                  q
+                    ? "No staff match that search."
+                    : "Onboard staff to give them access to CTC Hub."
+                }
+                icon={UsersIcon}
+              />
+            )}
+          </QuerySection>
         </div>
       ) : null}
 

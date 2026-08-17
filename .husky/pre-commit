@@ -1,1 +1,16 @@
-pnpm lint
+#!/bin/sh
+
+echo "🔍 Running pre-commit hook..."
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" 2>/dev/null
+export PATH="$HOME/Library/pnpm:$PATH"
+
+files=$(git diff --cached --name-only)
+
+if [ -n "$files" ]; then
+  echo "🚀 Running lint for staged files..."
+  pnpm lint
+else
+  echo "✅ No files staged for commit."
+fi

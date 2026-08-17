@@ -85,7 +85,7 @@ We use Prisma migrations only — not `prisma db push`.
 | `pnpm db:seed` | Run [`prisma/seed.ts`](prisma/seed.ts) |
 | `pnpm db:studio` | Open Prisma Studio |
 
-Schema lives in [`prisma/schema.prisma`](prisma/schema.prisma). New SQL goes under `prisma/migrations/`.
+Schema lives in [`prisma/schema.prisma`](prisma/schema.prisma). Seed and migration paths are in [`prisma.config.ts`](prisma.config.ts). New SQL goes under `prisma/migrations/`.
 
 ### Seeding
 
@@ -148,7 +148,7 @@ pnpm knip
 pnpm format
 ```
 
-5. Commit with Conventional Commits (Husky runs **lint** on pre-commit and **commitlint** on commit-msg).
+5. Commit with Conventional Commits. Husky runs **lint** on pre-commit, **commitlint** on commit-msg, **build** and **typecheck** on pre-push, and **pnpm install** on post-merge when lockfile files change.
 
 ### Commit messages
 

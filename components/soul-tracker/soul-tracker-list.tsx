@@ -6,8 +6,11 @@ import { useMemo, useState } from "react"
 import type { SoulStage } from "@/lib/db/enums"
 import { format } from "date-fns"
 
+import { WaypointsIcon } from "lucide-react"
+
 import { EmptyState } from "@/components/shared/empty-state"
 import { PageHeader } from "@/components/shared/page-header"
+import { QuerySection, TableSkeleton } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -85,56 +88,72 @@ export function SoulTrackerList() {
           </SelectContent>
         </Select>
       </div>
-      {query.data?.items.length ? (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Soul</TableHead>
-                <TableHead>Current stage</TableHead>
-                <TableHead>Started</TableHead>
-                <TableHead>Assigned to</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {query.data.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <div>{item.personName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {item.member?.memberCode ?? item.firstTimer?.id.slice(0, 8)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge value={item.currentStage} />
-                  </TableCell>
-                  <TableCell>{format(new Date(item.createdAt), "MMM d, yyyy")}</TableCell>
-                  <TableCell>
-                    {item.assignedTo
-                      ? `${item.assignedTo.firstName} ${item.assignedTo.lastName}`
-                      : "Unassigned"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      render={<Link href={`/soul-tracker/${item.id}`} />}
-                    >
-                      Open
-                    </Button>
-                  </TableCell>
+      <QuerySection
+        isPending={query.isPending}
+        isError={query.isError}
+        isFetching={query.isFetching}
+        error={query.error}
+        onRetry={() => query.refetch()}
+        hasData={Boolean(query.data)}
+        skeleton={<TableSkeleton columns={5} />}
+      >
+        {query.data?.items.length ? (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Soul</TableHead>
+                  <TableHead>Current stage</TableHead>
+                  <TableHead>Started</TableHead>
+                  <TableHead>Assigned to</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState
-          title="No journeys yet"
-          description="Soul Tracker records are created when a first timer is registered."
-        />
-      )}
+              </TableHeader>
+              <TableBody>
+                {query.data.items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div>{item.personName}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {item.member?.memberCode ??
+                          item.firstTimer?.id.slice(0, 8)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge value={item.currentStage} />
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(item.createdAt), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      {item.assignedTo
+                        ? `${item.assignedTo.firstName} ${item.assignedTo.lastName}`
+                        : "Unassigned"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        render={
+                          <Link href={`/admin/soul-tracker/${item.id}`} />
+                        }
+                      >
+                        Open
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <EmptyState
+            title="No journeys yet"
+            description="Soul Tracker records are created when a first timer is registered."
+            icon={WaypointsIcon}
+          />
+        )}
+      </QuerySection>
     </div>
   )
 }

@@ -21,7 +21,7 @@ export const memberSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phone: z.string().min(7, "Phone is required"),
-  email: optionalEmail,
+  email: z.string().email("Enter a valid email address"),
   gender: z.enum(["MALE", "FEMALE"]),
   dateOfBirth: z.string().optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
@@ -31,21 +31,106 @@ export const memberSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
 })
 
-export const firstTimerSchema = z.object({
+export const memberSignupSchema = memberSchema.extend({
+  branchSlug: z.string().min(1, "Campus is required"),
+})
+
+export const memberSelfUpdateSchema = memberSchema.omit({
+  dateJoined: true,
+  status: true,
+})
+
+export const soulWinSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phone: z.string().min(7, "Phone is required"),
   email: optionalEmail,
-  address: z.string().optional().or(z.literal("")),
-  gender: z.enum(["MALE", "FEMALE"]),
-  invitedBy: z.string().optional().or(z.literal("")),
-  eventId: z.string().optional().or(z.literal("")),
-  prayerRequest: z.string().optional().or(z.literal("")),
-  assignedToId: z.string().optional().or(z.literal("")),
-  status: z
-    .enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "TREASURE_HUNT"])
-    .optional(),
+  eventType: z.enum(["PERSONAL", "GROWTHNET", "WINSOME"], {
+    error: "Select an event type",
+  }),
 })
+
+const firstTimerVisitorFields = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phone: z.string().min(7, "Phone is required"),
+  email: optionalEmail,
+  occupation: z.string().optional().or(z.literal("")),
+  birthday: z
+    .union([
+      z.literal(""),
+      z.string().regex(/^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])$/, "Use dd/mm"),
+    ])
+    .optional(),
+  gender: z.enum(["MALE", "FEMALE"], {
+    error: "Select a gender",
+  }),
+  ageRange: z.enum(["BELOW_20", "RANGE_20_29", "RANGE_30_39", "ABOVE_40"], {
+    error: "Select an age range",
+  }),
+  membershipInterest: z.enum(["YES", "NO", "INDECISIVE"], {
+    error: "Select an option",
+  }),
+  hearAboutUs: z
+    .array(
+      z.enum([
+        "FACEBOOK",
+        "FAMILY",
+        "FLYER",
+        "PREACHING",
+        "WHATSAPP",
+        "INSTAGRAM",
+        "YOUTUBE",
+        "GOOGLE_SEARCH",
+        "WEBSITE",
+        "EMAIL_SMS",
+        "TV",
+        "RADIO",
+        "OTHER",
+      ])
+    )
+    .min(1, "Select at least one option"),
+  hearAboutOther: z.string().optional().or(z.literal("")),
+  prayerRequest: z.string().optional().or(z.literal("")),
+})
+
+function withHearAboutOther<T extends z.ZodType>(schema: T) {
+  return schema.refine(
+    (data) => {
+      const value = data as { hearAboutUs: string[]; hearAboutOther?: string }
+      return (
+        !value.hearAboutUs.includes("OTHER") ||
+        Boolean(value.hearAboutOther?.trim())
+      )
+    },
+    {
+      message: "Specify how you heard about us",
+      path: ["hearAboutOther"],
+    }
+  )
+}
+
+export const firstTimerVisitorSchema = withHearAboutOther(
+  firstTimerVisitorFields
+)
+
+export const publicFirstTimerSchema = withHearAboutOther(
+  firstTimerVisitorFields.extend({
+    branchSlug: z.string().min(1, "Campus is required"),
+  })
+)
+
+export const firstTimerSchema = withHearAboutOther(
+  firstTimerVisitorFields.extend({
+    address: z.string().optional().or(z.literal("")),
+    invitedBy: z.string().optional().or(z.literal("")),
+    eventId: z.string().optional().or(z.literal("")),
+    assignedToId: z.string().optional().or(z.literal("")),
+    status: z
+      .enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "TREASURE_HUNT"])
+      .optional(),
+  })
+)
 
 export const firstTimerStatusSchema = z.object({
   status: z.enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "TREASURE_HUNT"]),
@@ -127,4 +212,16 @@ export const paginationSchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
+})
+
+export const supportRequestSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Enter a valid email address"),
+  phone: z.string().optional().or(z.literal("")),
+  topic: z.enum(
+    ["ACCOUNT_DELETED", "SIGN_IN", "PASSWORD", "PROFILE", "OTHER"],
+    { error: "Select the support you need" }
+  ),
+  message: z.string().min(10, "Tell us a little more so we can help"),
 })

@@ -6,12 +6,17 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import type { Member } from "@/lib/db/types"
 
+import { UsersIcon } from "lucide-react"
+
 import { MemberFormSheet } from "@/components/members/member-form-sheet"
 import { EmptyState } from "@/components/shared/empty-state"
 import { PageHeader } from "@/components/shared/page-header"
+import { QuerySection, TableSkeleton } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -37,6 +42,13 @@ type ListResponse = {
   pageSize: number
 }
 
+type StatsResponse = {
+  total: number
+  active: number
+  inactive: number
+  deleted: number
+}
+
 export function MembersView({ role }: { role: Role }) {
   const queryClient = useQueryClient()
   const [q, setQ] = useState("")
@@ -55,6 +67,11 @@ export function MembersView({ role }: { role: Role }) {
     return search.toString()
   }, [q, chapel, status, gender, page])
 
+  const statsQuery = useQuery({
+    queryKey: ["members", "stats"],
+    queryFn: () => api<StatsResponse>("/api/members/stats"),
+  })
+
   const query = useQuery({
     queryKey: ["members", params],
     queryFn: () => api<ListResponse>(`/api/members?${params}`),
@@ -64,7 +81,7 @@ export function MembersView({ role }: { role: Role }) {
     mutationFn: (values: Record<string, unknown>) =>
       api("/api/members", { method: "POST", body: JSON.stringify(values) }),
     onSuccess: () => {
-      toast.success("Member created.")
+      toast.success("Invitation email sent with a temporary password.")
       queryClient.invalidateQueries({ queryKey: ["members"] })
     },
     onError: (error: Error) => toast.error(error.message),
@@ -77,10 +94,35 @@ export function MembersView({ role }: { role: Role }) {
         description="Search, filter, and manage church members."
         action={
           can(role, "members:write")
-            ? { label: "Add member", onClick: () => setOpen(true) }
+            ? { label: "Invite member", onClick: () => setOpen(true) }
             : undefined
         }
       />
+      <QuerySection
+        isPending={statsQuery.isPending}
+        isError={statsQuery.isError}
+        isFetching={statsQuery.isFetching}
+        error={statsQuery.error}
+        onRetry={() => statsQuery.refetch()}
+        hasData={Boolean(statsQuery.data)}
+        skeleton={<StatsSkeleton />}
+      >
+        <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Total members" value={statsQuery.data?.total ?? 0} />
+          <StatCard
+            label="Active members"
+            value={statsQuery.data?.active ?? 0}
+          />
+          <StatCard
+            label="Inactive members"
+            value={statsQuery.data?.inactive ?? 0}
+          />
+          <StatCard
+            label="Deleted members"
+            value={statsQuery.data?.deleted ?? 0}
+          />
+        </div>
+      </QuerySection>
       <div className="mb-4 flex flex-wrap gap-2">
         <Input
           placeholder="Search name, phone, or ID"
@@ -118,6 +160,7 @@ export function MembersView({ role }: { role: Role }) {
             ALL: "All statuses",
             ACTIVE: "Active",
             INACTIVE: "Inactive",
+            DELETED: "Deleted",
           }}
         >
           <SelectTrigger className="w-36">
@@ -127,6 +170,7 @@ export function MembersView({ role }: { role: Role }) {
             <SelectItem value="ALL">All statuses</SelectItem>
             <SelectItem value="ACTIVE">Active</SelectItem>
             <SelectItem value="INACTIVE">Inactive</SelectItem>
+            <SelectItem value="DELETED">Deleted</SelectItem>
           </SelectContent>
         </Select>
         <Select
@@ -148,82 +192,132 @@ export function MembersView({ role }: { role: Role }) {
           </SelectContent>
         </Select>
       </div>
-      {query.data?.items.length ? (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Member ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Chapel</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {query.data.items.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.memberCode}</TableCell>
-                  <TableCell>
-                    {member.firstName} {member.lastName}
-                  </TableCell>
-                  <TableCell>{member.phone}</TableCell>
-                  <TableCell>
-                    <StatusBadge value={member.chapel} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge value={member.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" render={<Link href={`/members/${member.id}`} />}>
-                      View
-                    </Button>
-                  </TableCell>
+      <QuerySection
+        isPending={query.isPending}
+        isError={query.isError}
+        isFetching={query.isFetching}
+        error={query.error}
+        onRetry={() => query.refetch()}
+        hasData={Boolean(query.data)}
+        skeleton={<TableSkeleton columns={6} />}
+      >
+        {query.data?.items.length ? (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Member ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Chapel</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground">
-            <span>
-              {(query.data.page - 1) * query.data.pageSize + 1}-
-              {Math.min(query.data.page * query.data.pageSize, query.data.total)} of{" "}
-              {query.data.total}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage((value) => value - 1)}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page * 10 >= query.data.total}
-                onClick={() => setPage((value) => value + 1)}
-              >
-                Next
-              </Button>
+              </TableHeader>
+              <TableBody>
+                {query.data.items.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">
+                      {member.memberCode}
+                    </TableCell>
+                    <TableCell>
+                      {member.firstName} {member.lastName}
+                    </TableCell>
+                    <TableCell>{member.phone}</TableCell>
+                    <TableCell>
+                      <StatusBadge value={member.chapel} />
+                    </TableCell>
+                    <TableCell>
+                      {member.isDeleted ? (
+                        <StatusBadge value="DELETED" />
+                      ) : (
+                        <StatusBadge value={member.status} />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        render={<Link href={`/admin/members/${member.id}`} />}
+                      >
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground">
+              <span>
+                {(query.data.page - 1) * query.data.pageSize + 1}-
+                {Math.min(
+                  query.data.page * query.data.pageSize,
+                  query.data.total
+                )}{" "}
+                of {query.data.total}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setPage((value) => value - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page * 10 >= query.data.total}
+                  onClick={() => setPage((value) => value + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <EmptyState
-          title="No members yet"
-          description="Register a member to start building the Yaba directory."
-        />
-      )}
+        ) : (
+          <EmptyState
+            title="No members yet"
+            description="Invite a member to start building the campus directory."
+            icon={UsersIcon}
+          />
+        )}
+      </QuerySection>
       <MemberFormSheet
         open={open}
         onOpenChange={setOpen}
-        title="Add member"
+        title="Invite member"
         onSubmit={async (values) => {
           await createMutation.mutateAsync(values)
         }}
       />
+    </div>
+  )
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <p className="text-3xl font-semibold">{value.toLocaleString()}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{label}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function StatsSkeleton() {
+  return (
+    <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Card key={index}>
+          <CardContent className="pt-6">
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="mt-3 h-4 w-28" />
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }

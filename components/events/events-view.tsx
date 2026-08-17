@@ -2,27 +2,19 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
+import { CalendarDaysIcon } from "lucide-react"
 import { useMemo, useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { z } from "zod"
 import type { Event } from "@/lib/db/types"
 
+import { EventFormSheet } from "@/components/events/event-form-sheet"
 import { EmptyState } from "@/components/shared/empty-state"
 import { PageHeader } from "@/components/shared/page-header"
+import { CardsSkeleton, QuerySection } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -30,10 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/lib/api/client"
 import { can, type Role } from "@/lib/auth/rbac"
 import { eventSchema } from "@/lib/validation/schemas"
+import { z } from "zod"
 
 type Values = z.infer<typeof eventSchema>
 
@@ -59,21 +51,11 @@ export function EventsView({ role }: { role: Role }) {
   const query = useQuery({
     queryKey: ["events", params],
     queryFn: () =>
-      api<{ items: Array<Event & { createdBy: { firstName: string; lastName: string } }> }>(
-        `/api/events?${params}`
-      ),
-  })
-
-  const form = useForm<Values>({
-    resolver: zodResolver(eventSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      startsAt: "",
-      endsAt: "",
-      venue: "",
-      status: "SCHEDULED",
-    },
+      api<{
+        items: Array<
+          Event & { createdBy: { firstName: string; lastName: string } }
+        >
+      }>(`/api/events?${params}`),
   })
 
   const saveMutation = useMutation({
@@ -84,14 +66,16 @@ export function EventsView({ role }: { role: Role }) {
           body: JSON.stringify(values),
         })
       }
-      return api("/api/events", { method: "POST", body: JSON.stringify(values) })
+      return api("/api/events", {
+        method: "POST",
+        body: JSON.stringify(values),
+      })
     },
     onSuccess: () => {
       toast.success(editing ? "Event updated." : "Event created.")
       queryClient.invalidateQueries({ queryKey: ["events"] })
       setOpen(false)
       setEditing(null)
-      form.reset()
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -120,21 +104,11 @@ export function EventsView({ role }: { role: Role }) {
 
   function openCreate() {
     setEditing(null)
-    form.reset()
     setOpen(true)
   }
 
   function openEdit(event: Event) {
     setEditing(event)
-    form.reset({
-      title: event.title,
-      description: event.description ?? "",
-      startsAt: toLocalInput(new Date(event.startsAt)),
-      endsAt: toLocalInput(new Date(event.endsAt)),
-      venue: event.venue,
-      status: event.status,
-      capacity: event.capacity,
-    })
     setOpen(true)
   }
 
@@ -179,156 +153,112 @@ export function EventsView({ role }: { role: Role }) {
           </SelectContent>
         </Select>
       </div>
-      {query.data?.items.length ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {query.data.items.map((event) => (
-            <Card key={event.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base">{event.title}</CardTitle>
-                  <StatusBadge value={event.status} />
-                </div>
-              </CardHeader>
-              <CardContent className="grid gap-2 text-sm text-muted-foreground">
-                <p>{format(new Date(event.startsAt), "EEE d MMM yyyy, HH:mm")}</p>
-                <p>{event.venue}</p>
-                <p>
-                  Created by {event.createdBy.firstName} {event.createdBy.lastName}
-                </p>
-                {can(role, "events:write") ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => openEdit(event)}>
-                      Edit
-                    </Button>
-                    {event.status !== "CANCELLED" ? (
+      <QuerySection
+        isPending={query.isPending}
+        isError={query.isError}
+        isFetching={query.isFetching}
+        error={query.error}
+        onRetry={() => query.refetch()}
+        hasData={Boolean(query.data)}
+        skeleton={<CardsSkeleton count={6} />}
+      >
+        {query.data?.items.length ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {query.data.items.map((event) => (
+              <Card key={event.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base">{event.title}</CardTitle>
+                    <StatusBadge value={event.status} />
+                  </div>
+                </CardHeader>
+                <CardContent className="grid gap-2 text-sm text-muted-foreground">
+                  <p>
+                    {format(new Date(event.startsAt), "EEE d MMM yyyy, HH:mm")}
+                  </p>
+                  <p>{event.venue}</p>
+                  <p>
+                    Created by {event.createdBy.firstName}{" "}
+                    {event.createdBy.lastName}
+                  </p>
+                  {can(role, "events:write") ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => cancelMutation.mutate(event.id)}
-                        isLoading={
-                          cancelMutation.isPending &&
-                          cancelMutation.variables === event.id
-                        }
-                        isLoadingText="Cancelling..."
+                        onClick={() => openEdit(event)}
                       >
-                        Cancel
+                        Edit
                       </Button>
-                    ) : null}
-                    {event.status === "DRAFT" || event.status === "CANCELLED" ? (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteMutation.mutate(event.id)}
-                        isLoading={
-                          deleteMutation.isPending &&
-                          deleteMutation.variables === event.id
-                        }
-                        isLoadingText="Deleting..."
-                      >
-                        Delete
-                      </Button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          title="No events"
-          description="Create Sunday service, Treasure Hunt, or a prayer meeting."
-        />
-      )}
+                      {event.status !== "CANCELLED" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => cancelMutation.mutate(event.id)}
+                          isLoading={
+                            cancelMutation.isPending &&
+                            cancelMutation.variables === event.id
+                          }
+                          isLoadingText="Cancelling..."
+                        >
+                          Cancel
+                        </Button>
+                      ) : null}
+                      {event.status === "DRAFT" ||
+                      event.status === "CANCELLED" ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteMutation.mutate(event.id)}
+                          isLoading={
+                            deleteMutation.isPending &&
+                            deleteMutation.variables === event.id
+                          }
+                          isLoadingText="Deleting..."
+                        >
+                          Delete
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="No events"
+            description="Create Sunday service, Treasure Hunt, or a prayer meeting."
+            icon={CalendarDaysIcon}
+          />
+        )}
+      </QuerySection>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit event" : "Create event"}</DialogTitle>
-          </DialogHeader>
-          <form
-            className="grid gap-3"
-            onSubmit={form.handleSubmit((values) => saveMutation.mutateAsync(values))}
-          >
-            <div className="grid gap-1.5">
-              <Label>Title</Label>
-              <Input
-                aria-invalid={Boolean(form.formState.errors.title)}
-                {...form.register("title")}
-              />
-              {form.formState.errors.title ? (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.title.message}
-                </p>
-              ) : null}
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Description</Label>
-              <Textarea {...form.register("description")} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label>Starts</Label>
-                <Input
-                  type="datetime-local"
-                  aria-invalid={Boolean(form.formState.errors.startsAt)}
-                  {...form.register("startsAt")}
-                />
-                {form.formState.errors.startsAt ? (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.startsAt.message}
-                  </p>
-                ) : null}
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Ends</Label>
-                <Input
-                  type="datetime-local"
-                  aria-invalid={Boolean(form.formState.errors.endsAt)}
-                  {...form.register("endsAt")}
-                />
-                {form.formState.errors.endsAt ? (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.endsAt.message}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Venue</Label>
-              <Input
-                aria-invalid={Boolean(form.formState.errors.venue)}
-                {...form.register("venue")}
-              />
-              {form.formState.errors.venue ? (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.venue.message}
-                </p>
-              ) : null}
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Capacity (optional)</Label>
-              <Input
-                type="number"
-                onChange={(event) =>
-                  form.setValue(
-                    "capacity",
-                    event.target.value ? Number(event.target.value) : null
-                  )
-                }
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" isLoading={saveMutation.isPending} isLoadingText="Saving...">
-                Save
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <EventFormSheet
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next)
+          if (!next) setEditing(null)
+        }}
+        title={editing ? "Edit event" : "Create event"}
+        defaultValues={
+          editing
+            ? {
+                title: editing.title,
+                description: editing.description ?? "",
+                startsAt: toLocalInput(new Date(editing.startsAt)),
+                endsAt: toLocalInput(new Date(editing.endsAt)),
+                venue: editing.venue,
+                status: editing.status,
+                capacity: editing.capacity,
+              }
+            : undefined
+        }
+        isSubmitting={saveMutation.isPending}
+        onSubmit={async (values) => {
+          await saveMutation.mutateAsync(values)
+        }}
+      />
     </div>
   )
 }

@@ -1,11 +1,8 @@
-import { handleRouteError, jsonError, emptyToNull, jsonOk } from "@/lib/api/errors"
+import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
+import { inviteMember } from "@/lib/members/create"
 import { memberSchema, paginationSchema } from "@/lib/validation/schemas"
-
-function memberCodePrefix(slug: string) {
-  return slug.slice(0, 3).toUpperCase()
-}
 
 export async function GET(request: Request) {
   try {
@@ -20,19 +17,38 @@ export async function GET(request: Request) {
     const status = searchParams.get("status")
     const gender = searchParams.get("gender")
 
+    const deletedFilter =
+      status === "DELETED"
+        ? { isDeleted: true }
+        : {
+            isDeleted: false,
+            ...(status === "ACTIVE" || status === "INACTIVE"
+              ? { status: status as "ACTIVE" | "INACTIVE" }
+              : {}),
+          }
+
     const where = {
       branchId,
+      ...deletedFilter,
       ...(chapel ? { chapel: chapel as "ADULT" | "YOUTH" | "JUNIOR" } : {}),
-      ...(status ? { status: status as "ACTIVE" | "INACTIVE" } : {}),
       ...(gender ? { gender: gender as "MALE" | "FEMALE" } : {}),
       ...(parsed.q
         ? {
             OR: [
-              { firstName: { contains: parsed.q, mode: "insensitive" as const } },
-              { lastName: { contains: parsed.q, mode: "insensitive" as const } },
+              {
+                firstName: { contains: parsed.q, mode: "insensitive" as const },
+              },
+              {
+                lastName: { contains: parsed.q, mode: "insensitive" as const },
+              },
               { phone: { contains: parsed.q } },
               { email: { contains: parsed.q, mode: "insensitive" as const } },
-              { memberCode: { contains: parsed.q, mode: "insensitive" as const } },
+              {
+                memberCode: {
+                  contains: parsed.q,
+                  mode: "insensitive" as const,
+                },
+              },
             ],
           }
         : {}),
@@ -48,7 +64,12 @@ export async function GET(request: Request) {
       prisma.member.count({ where }),
     ])
 
-    return jsonOk({ items, total, page: parsed.page, pageSize: parsed.pageSize })
+    return jsonOk({
+      items,
+      total,
+      page: parsed.page,
+      pageSize: parsed.pageSize,
+    })
   } catch (error) {
     return handleRouteError(error)
   }
@@ -58,32 +79,7 @@ export async function POST(request: Request) {
   try {
     const { branchId } = await requireBranchContext("members:write")
     const data = memberSchema.parse(await request.json())
-
-    const member = await prisma.$transaction(async (tx) => {
-      const branch = await tx.branch.update({
-        where: { id: branchId },
-        data: { memberSeq: { increment: 1 } },
-      })
-      const memberCode = `${memberCodePrefix(branch.slug)}-${String(branch.memberSeq).padStart(4, "0")}`
-
-      return tx.member.create({
-        data: {
-          branchId,
-          memberCode,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          email: emptyToNull(data.email),
-          gender: data.gender,
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-          address: emptyToNull(data.address),
-          chapel: data.chapel,
-          dateJoined: new Date(data.dateJoined),
-          photoUrl: emptyToNull(data.photoUrl),
-        },
-      })
-    })
-
+    const member = await inviteMember({ branchId, data })
     return jsonOk(member, 201)
   } catch (error) {
     return handleRouteError(error)
