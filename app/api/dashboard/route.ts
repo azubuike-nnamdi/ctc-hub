@@ -46,7 +46,9 @@ export async function GET() {
       recentMemberDates,
       recentFirstTimerDates,
     ] = await Promise.all([
-      prisma.member.count({ where: { branchId, status: "ACTIVE" } }),
+      prisma.member.count({
+        where: { branchId, status: "ACTIVE", isDeleted: false },
+      }),
       prisma.firstTimer.count({ where: { branchId } }),
       prisma.soulTracker.count({ where: { branchId } }),
       prisma.event.count({
@@ -58,7 +60,7 @@ export async function GET() {
         take: 5,
       }),
       prisma.member.findMany({
-        where: { branchId },
+        where: { branchId, isDeleted: false },
         orderBy: { updatedAt: "desc" },
         take: 5,
       }),
@@ -69,7 +71,7 @@ export async function GET() {
       }),
       prisma.member.groupBy({
         by: ["chapel"],
-        where: { branchId },
+        where: { branchId, isDeleted: false },
         _count: { _all: true },
       }),
       prisma.firstTimer.groupBy({
@@ -84,11 +86,11 @@ export async function GET() {
       }),
       prisma.member.groupBy({
         by: ["gender"],
-        where: { branchId, status: "ACTIVE" },
+        where: { branchId, status: "ACTIVE", isDeleted: false },
         _count: { _all: true },
       }),
       prisma.member.findMany({
-        where: { branchId, createdAt: { gte: sixMonthsAgo } },
+        where: { branchId, createdAt: { gte: sixMonthsAgo }, isDeleted: false },
         select: { createdAt: true },
       }),
       prisma.firstTimer.findMany({
