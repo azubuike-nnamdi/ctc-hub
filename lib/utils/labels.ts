@@ -7,6 +7,8 @@ import type {
   HearAboutSource,
   MembershipInterest,
   SoulStage,
+  SoulWinEventType,
+  SupportTopic,
 } from "@/lib/db/enums"
 
 export const SOUL_STAGES: SoulStage[] = [
@@ -137,4 +139,41 @@ export function initials(firstName: string, lastName: string) {
 
 export function fullName(firstName: string, lastName: string) {
   return `${firstName} ${lastName}`
+}
+
+export const SOUL_WIN_EVENT_TYPES: SoulWinEventType[] = [
+  "PERSONAL",
+  "GROWTHNET",
+  "WINSOME",
+]
+
+export const SOUL_WIN_EVENT_LABELS: Record<SoulWinEventType, string> = {
+  PERSONAL: "Personal",
+  GROWTHNET: "GrowthNet",
+  WINSOME: "Winsome",
+}
+
+export const SUPPORT_TOPICS: SupportTopic[] = [
+  "ACCOUNT_DELETED",
+  "SIGN_IN",
+  "PASSWORD",
+  "PROFILE",
+  "OTHER",
+]
+
+export const SUPPORT_TOPIC_LABELS: Record<SupportTopic, string> = {
+  ACCOUNT_DELETED: "My account was deleted",
+  SIGN_IN: "I cannot sign in",
+  PASSWORD: "Password or reset help",
+  PROFILE: "Update my member details",
+  OTHER: "Something else",
+}
+
+export const SUPPORT_TOPIC_HELP: Record<SupportTopic, string> = {
+  ACCOUNT_DELETED:
+    "Ask the church office to restore access to a deleted member account.",
+  SIGN_IN: "Get help if sign-in fails or you are locked out.",
+  PASSWORD: "Request help resetting or changing your password.",
+  PROFILE: "Ask staff to correct your name, phone, chapel, or other details.",
+  OTHER: "Tell us what you need and we will point you to the right team.",
 }
