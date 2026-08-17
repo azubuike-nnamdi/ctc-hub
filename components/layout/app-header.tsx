@@ -3,9 +3,10 @@
 import { MoonIcon, SunIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import { signOut } from "next-auth/react"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
+import { AppBreadcrumb } from "@/components/layout/app-breadcrumb"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -43,22 +44,8 @@ export function AppHeader({
   currentBranchId?: string | null
 }) {
   const { resolvedTheme, setTheme } = useTheme()
-  const pathname = usePathname()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-
-  const titles: Record<string, string> = {
-    "/dashboard": "Dashboard",
-    "/members": "Members",
-    "/first-timers": "First Timers",
-    "/soul-tracker": "Soul Tracker",
-    "/events": "Events",
-    "/settings": "Settings",
-  }
-  const title =
-    Object.entries(titles).find(([href]) =>
-      href === "/dashboard" ? pathname === href : pathname.startsWith(href)
-    )?.[1] ?? "CTC Hub"
 
   function onBranchChange(branchId: string | null) {
     if (!branchId) {
@@ -78,7 +65,9 @@ export function AppHeader({
     <header className="flex h-14 items-center gap-3 border-b px-4">
       <SidebarTrigger />
       <div className="h-4 w-px bg-border" />
-      <h1 className="text-sm font-medium">{title}</h1>
+      <div className="min-w-0 flex-1">
+        <AppBreadcrumb />
+      </div>
       <div className="ml-auto flex items-center gap-2">
         {user.role === "SUPER_ADMIN" && branches.length > 0 ? (
           <Select
@@ -90,7 +79,7 @@ export function AppHeader({
               label: branch.name,
             }))}
           >
-            <SelectTrigger className="min-w-40 max-w-56">
+            <SelectTrigger size="sm" className="max-w-56 min-w-40">
               <SelectValue placeholder="Branch" />
             </SelectTrigger>
             <SelectContent>
@@ -105,9 +94,7 @@ export function AppHeader({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() =>
-            setTheme(resolvedTheme === "dark" ? "light" : "dark")
-          }
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         >
           <SunIcon className="dark:hidden" />
           <MoonIcon className="hidden dark:block" />
@@ -133,7 +120,7 @@ export function AppHeader({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
-                window.location.href = "/settings"
+                router.push("/dashboard/settings")
               }}
             >
               Settings
