@@ -1,5 +1,6 @@
 import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
+import { BreadcrumbLabelProvider } from "@/components/layout/breadcrumb-label-provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { prisma } from "@/lib/db/prisma"
 import { requireUser } from "@/lib/auth/session"
@@ -21,16 +22,18 @@ export default async function DashboardGroupLayout({
       : []
 
   return (
-    <SidebarProvider>
-      <AppSidebar role={user.role} />
-      <SidebarInset>
-        <AppHeader
-          user={user}
-          branches={branches}
-          currentBranchId={branchId}
-        />
-        <div className="flex-1 overflow-auto p-6">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <BreadcrumbLabelProvider>
+      <SidebarProvider>
+        <AppSidebar role={user.role} />
+        <SidebarInset>
+          <AppHeader
+            user={user}
+            branches={branches}
+            currentBranchId={branchId}
+          />
+          <div className="flex-1 overflow-auto p-6">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </BreadcrumbLabelProvider>
   )
 }
