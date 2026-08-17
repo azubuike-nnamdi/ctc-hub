@@ -120,7 +120,11 @@ export function AppHeader({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
-                router.push("/dashboard/settings")
+                router.push(
+                  user.role === "MEMBER"
+                    ? "/dashboard/settings"
+                    : "/admin/settings"
+                )
               }}
             >
               Settings
