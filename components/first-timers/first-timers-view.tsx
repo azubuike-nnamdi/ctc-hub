@@ -2,14 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { z } from "zod"
 import type { FirstTimer } from "@/lib/db/types"
 
+import { UserPlusIcon } from "lucide-react"
+
+import { FirstTimerFormSheet } from "@/components/first-timers/first-timer-form-sheet"
+import type { FirstTimerVisitorValues } from "@/components/first-timers/first-timer-form-fields"
 import { EmptyState } from "@/components/shared/empty-state"
+import { ErrorState } from "@/components/shared/error-state"
 import { PageHeader } from "@/components/shared/page-header"
+import { QuerySection, TableSkeleton } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,26 +43,40 @@ import {
 } from "@/components/ui/table"
 import { api } from "@/lib/api/client"
 import { can, type Role } from "@/lib/auth/rbac"
-import { firstTimerSchema } from "@/lib/validation/schemas"
+import {
+  AGE_RANGE_LABELS,
+  FIRST_TIMER_CREATED_BY_LABELS,
+  HEAR_ABOUT_LABELS,
+  MEMBERSHIP_INTEREST_LABELS,
+} from "@/lib/utils/labels"
 import { format } from "date-fns"
+import Link from "next/link"
 
-type Values = z.infer<typeof firstTimerSchema>
 type ListResponse = {
   items: Array<
     FirstTimer & {
       assignedTo: { firstName: string; lastName: string } | null
+      createdByUser: { firstName: string; lastName: string } | null
     }
   >
   total: number
 }
 
-export function FirstTimersView({ role }: { role: Role }) {
+export function FirstTimersView({
+  role,
+  publicFormPath,
+}: {
+  role: Role
+  publicFormPath?: string
+}) {
   const queryClient = useQueryClient()
   const [q, setQ] = useState("")
   const [status, setStatus] = useState("ALL")
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
-  const [selected, setSelected] = useState<FirstTimer | null>(null)
+  const [selected, setSelected] = useState<
+    ListResponse["items"][number] | null
+  >(null)
   const [note, setNote] = useState("")
 
   const params = useMemo(() => {
@@ -77,41 +94,34 @@ export function FirstTimersView({ role }: { role: Role }) {
     queryKey: ["options"],
     queryFn: () =>
       api<{
-        followUpUsers: Array<{ id: string; firstName: string; lastName: string }>
-        events: Array<{ id: string; title: string }>
+        followUpUsers: Array<{
+          id: string
+          firstName: string
+          lastName: string
+        }>
       }>("/api/options"),
   })
 
-  const form = useForm<Values>({
-    resolver: zodResolver(firstTimerSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      phone: "",
-      email: "",
-      address: "",
-      gender: "MALE",
-      invitedBy: "",
-      eventId: "",
-      prayerRequest: "",
-      assignedToId: "",
-    },
-  })
-
   const createMutation = useMutation({
-    mutationFn: (values: Values) =>
-      api("/api/first-timers", { method: "POST", body: JSON.stringify(values) }),
+    mutationFn: (values: FirstTimerVisitorValues) =>
+      api("/api/first-timers", {
+        method: "POST",
+        body: JSON.stringify(values),
+      }),
     onSuccess: () => {
       toast.success("First timer registered.")
       queryClient.invalidateQueries({ queryKey: ["first-timers"] })
       setOpen(false)
-      form.reset()
     },
     onError: (error: Error) => toast.error(error.message),
   })
 
   const statusMutation = useMutation({
-    mutationFn: (payload: { id: string; status: string; assignedToId?: string }) =>
+    mutationFn: (payload: {
+      id: string
+      status: string
+      assignedToId?: string
+    }) =>
       api(`/api/first-timers/${payload.id}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -145,6 +155,16 @@ export function FirstTimersView({ role }: { role: Role }) {
       <PageHeader
         title="First Timers"
         description="Register visitors and track follow-up through Treasure Hunt."
+        extra={
+          publicFormPath ? (
+            <Button
+              variant="outline"
+              render={<Link href={publicFormPath} target="_blank" />}
+            >
+              Public form
+            </Button>
+          ) : undefined
+        }
         action={
           can(role, "first-timers:create")
             ? { label: "Register first timer", onClick: () => setOpen(true) }
@@ -186,235 +206,162 @@ export function FirstTimersView({ role }: { role: Role }) {
           </SelectContent>
         </Select>
       </div>
-      {query.data?.items.length ? (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Visitor</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Gender</TableHead>
-                <TableHead>Date visited</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Assigned to</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {query.data.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    {item.firstName} {item.lastName}
-                  </TableCell>
-                  <TableCell>{item.phone}</TableCell>
-                  <TableCell>
-                    <StatusBadge value={item.gender} />
-                  </TableCell>
-                  <TableCell>{format(new Date(item.registeredAt), "MMM d, yyyy")}</TableCell>
-                  <TableCell>
-                    <StatusBadge value={item.status} />
-                  </TableCell>
-                  <TableCell>
-                    {item.assignedTo
-                      ? `${item.assignedTo.firstName} ${item.assignedTo.lastName}`
-                      : "Unassigned"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {can(role, "first-timers:follow-up") ? (
-                      <Button variant="ghost" size="sm" onClick={() => setSelected(item)}>
-                        Follow up
-                      </Button>
-                    ) : null}
-                  </TableCell>
+      <QuerySection
+        isPending={query.isPending}
+        isError={query.isError}
+        isFetching={query.isFetching}
+        error={query.error}
+        onRetry={() => query.refetch()}
+        hasData={Boolean(query.data)}
+        skeleton={<TableSkeleton columns={8} />}
+      >
+        {query.data?.items.length ? (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Visitor</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Gender</TableHead>
+                  <TableHead>Date visited</TableHead>
+                  <TableHead>Registered by</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Assigned to</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <EmptyState
-          title="No first timers yet"
-          description="Register a visitor after Sunday service to start follow-up."
-        />
-      )}
+              </TableHeader>
+              <TableBody>
+                {query.data.items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      {item.firstName} {item.lastName}
+                    </TableCell>
+                    <TableCell>{item.phone}</TableCell>
+                    <TableCell>
+                      <StatusBadge value={item.gender} />
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(item.registeredAt), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      {item.createdBy === "SELF" ? (
+                        <StatusBadge value="SELF" />
+                      ) : item.createdByUser ? (
+                        `${item.createdByUser.firstName} ${item.createdByUser.lastName}`
+                      ) : (
+                        "Staff"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge value={item.status} />
+                    </TableCell>
+                    <TableCell>
+                      {item.assignedTo
+                        ? `${item.assignedTo.firstName} ${item.assignedTo.lastName}`
+                        : "Unassigned"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {can(role, "first-timers:follow-up") ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelected(item)}
+                        >
+                          Follow up
+                        </Button>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <EmptyState
+            title="No first timers yet"
+            description="Register a visitor after Sunday service to start follow-up."
+            icon={UserPlusIcon}
+          />
+        )}
+      </QuerySection>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>Register First Timer</SheetTitle>
-            <SheetDescription>
-              Capture the visitor details needed for follow-up.
-            </SheetDescription>
-          </SheetHeader>
-          <form
-            className="flex min-h-0 flex-1 flex-col"
-            onSubmit={form.handleSubmit((values) => createMutation.mutateAsync(values))}
-          >
-            <div className="grid flex-1 content-start gap-3 overflow-y-auto px-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label>First Name</Label>
-                <Input
-                  aria-invalid={Boolean(form.formState.errors.firstName)}
-                  {...form.register("firstName")}
-                />
-                {form.formState.errors.firstName ? (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.firstName.message}
-                  </p>
-                ) : null}
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Last Name</Label>
-                <Input
-                  aria-invalid={Boolean(form.formState.errors.lastName)}
-                  {...form.register("lastName")}
-                />
-                {form.formState.errors.lastName ? (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.lastName.message}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label>Phone</Label>
-                <Input
-                  aria-invalid={Boolean(form.formState.errors.phone)}
-                  {...form.register("phone")}
-                />
-                {form.formState.errors.phone ? (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.phone.message}
-                  </p>
-                ) : null}
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  aria-invalid={Boolean(form.formState.errors.email)}
-                  {...form.register("email")}
-                />
-                {form.formState.errors.email ? (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.email.message}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Address</Label>
-              <Input {...form.register("address")} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label>Gender</Label>
-                <Select
-                  value={form.watch("gender")}
-                  onValueChange={(value) => value && form.setValue("gender", value as Values["gender"])}
-                  items={{ MALE: "Male", FEMALE: "Female" }}
-                >
-                  <SelectTrigger
-                    className="w-full"
-                    aria-invalid={Boolean(form.formState.errors.gender)}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MALE">Male</SelectItem>
-                    <SelectItem value="FEMALE">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Invited by</Label>
-                <Input {...form.register("invitedBy")} />
-              </div>
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Service / Event attended</Label>
-              <Select
-                value={form.watch("eventId") || "NONE"}
-                onValueChange={(value) => form.setValue("eventId", value === "NONE" ? "" : value ?? "")}
-                items={[
-                  { value: "NONE", label: "Not specified" },
-                  ...(options.data?.events.map((event) => ({
-                    value: event.id,
-                    label: event.title,
-                  })) ?? []),
-                ]}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select event" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NONE">Not specified</SelectItem>
-                  {options.data?.events.map((event) => (
-                    <SelectItem key={event.id} value={event.id}>
-                      {event.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Assigned follow-up person</Label>
-              <Select
-                value={form.watch("assignedToId") || "NONE"}
-                onValueChange={(value) =>
-                  form.setValue("assignedToId", value === "NONE" ? "" : value ?? "")
-                }
-                items={[
-                  { value: "NONE", label: "Unassigned" },
-                  ...(options.data?.followUpUsers.map((person) => ({
-                    value: person.id,
-                    label: `${person.firstName} ${person.lastName}`,
-                  })) ?? []),
-                ]}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NONE">Unassigned</SelectItem>
-                  {options.data?.followUpUsers.map((person) => (
-                    <SelectItem key={person.id} value={person.id}>
-                      {person.firstName} {person.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Prayer request</Label>
-              <Textarea {...form.register("prayerRequest")} />
-            </div>
-            </div>
-            <SheetFooter>
-              <Button type="button" variant="brand" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" isLoading={createMutation.isPending} isLoadingText="Submitting...">
-                Submit
-              </Button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
+      <FirstTimerFormSheet
+        open={open}
+        onOpenChange={setOpen}
+        isSubmitting={createMutation.isPending}
+        onSubmit={async (values) => {
+          await createMutation.mutateAsync(values)
+        }}
+      />
 
-      <Sheet open={Boolean(selected)} onOpenChange={(value) => !value && setSelected(null)}>
+      <Sheet
+        open={Boolean(selected)}
+        onOpenChange={(value) => !value && setSelected(null)}
+      >
         <SheetContent>
           <SheetHeader>
             <SheetTitle>
-              {selected ? `${selected.firstName} ${selected.lastName}` : "Follow up"}
+              {selected
+                ? `${selected.firstName} ${selected.lastName}`
+                : "Follow up"}
             </SheetTitle>
-            <SheetDescription>Update status and add a follow-up note.</SheetDescription>
+            <SheetDescription>
+              Update status and add a follow-up note.
+            </SheetDescription>
           </SheetHeader>
           {selected ? (
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="grid flex-1 content-start gap-3 overflow-y-auto px-4">
+                <dl className="grid gap-2 text-sm">
+                  <Detail
+                    label="Registered by"
+                    value={
+                      selected.createdBy === "SELF"
+                        ? FIRST_TIMER_CREATED_BY_LABELS.SELF
+                        : selected.createdByUser
+                          ? `${selected.createdByUser.firstName} ${selected.createdByUser.lastName}`
+                          : FIRST_TIMER_CREATED_BY_LABELS.STAFF
+                    }
+                  />
+                  {selected.occupation ? (
+                    <Detail label="Occupation" value={selected.occupation} />
+                  ) : null}
+                  {selected.birthday ? (
+                    <Detail label="Birthday" value={selected.birthday} />
+                  ) : null}
+                  {selected.ageRange ? (
+                    <Detail
+                      label="Age range"
+                      value={AGE_RANGE_LABELS[selected.ageRange]}
+                    />
+                  ) : null}
+                  {selected.membershipInterest ? (
+                    <Detail
+                      label="Wants membership"
+                      value={
+                        MEMBERSHIP_INTEREST_LABELS[selected.membershipInterest]
+                      }
+                    />
+                  ) : null}
+                  {selected.hearAboutUs.length ? (
+                    <Detail
+                      label="Heard about us"
+                      value={selected.hearAboutUs
+                        .map((source) =>
+                          source === "OTHER" && selected.hearAboutOther
+                            ? `Others (${selected.hearAboutOther})`
+                            : HEAR_ABOUT_LABELS[source]
+                        )
+                        .join(", ")}
+                    />
+                  ) : null}
+                  {selected.prayerRequest ? (
+                    <Detail
+                      label="Prayer request"
+                      value={selected.prayerRequest}
+                    />
+                  ) : null}
+                </dl>
                 <div className="grid gap-1.5">
                   <Label>Status</Label>
                   <StatusBadge value={selected.status} />
@@ -444,9 +391,72 @@ export function FirstTimersView({ role }: { role: Role }) {
                       <SelectItem value="CONTACTED">Contacted</SelectItem>
                       <SelectItem value="VISITED">Visited</SelectItem>
                       <SelectItem value="RETURNED">Returned</SelectItem>
-                      <SelectItem value="TREASURE_HUNT">Treasure Hunt</SelectItem>
+                      <SelectItem value="TREASURE_HUNT">
+                        Treasure Hunt
+                      </SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>Assigned follow-up person</Label>
+                  {options.isPending ? (
+                    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      Loading follow-up staff...
+                    </p>
+                  ) : options.isError ? (
+                    <ErrorState
+                      compact
+                      title="Could not load follow-up staff."
+                      description={options.error?.message}
+                      onRetry={() => options.refetch()}
+                      isRetrying={options.isFetching}
+                    />
+                  ) : (
+                    <Select
+                      value={selected.assignedToId || "NONE"}
+                      onValueChange={(value) => {
+                        if (!value) return
+                        const assignedToId = value === "NONE" ? "" : value
+                        statusMutation.mutate({
+                          id: selected.id,
+                          status: selected.status,
+                          assignedToId,
+                        })
+                        const person = options.data?.followUpUsers.find(
+                          (item) => item.id === assignedToId
+                        )
+                        setSelected({
+                          ...selected,
+                          assignedToId: assignedToId || null,
+                          assignedTo: person
+                            ? {
+                                firstName: person.firstName,
+                                lastName: person.lastName,
+                              }
+                            : null,
+                        })
+                      }}
+                      items={[
+                        { value: "NONE", label: "Unassigned" },
+                        ...(options.data?.followUpUsers.map((person) => ({
+                          value: person.id,
+                          label: `${person.firstName} ${person.lastName}`,
+                        })) ?? []),
+                      ]}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NONE">Unassigned</SelectItem>
+                        {options.data?.followUpUsers.map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.firstName} {person.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="grid gap-1.5">
                   <Label>Note</Label>
@@ -477,6 +487,15 @@ export function FirstTimersView({ role }: { role: Role }) {
           ) : null}
         </SheetContent>
       </Sheet>
+    </div>
+  )
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd>{value}</dd>
     </div>
   )
 }
