@@ -8,11 +8,10 @@ import { QueryProvider } from "@/components/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { getAppOrigin } from "@/lib/utils/app-url"
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  ),
+  metadataBase: getAppOrigin(),
   title: {
     default: "CTC Hub",
     template: "%s | CTC Hub",

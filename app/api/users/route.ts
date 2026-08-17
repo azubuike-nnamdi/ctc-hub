@@ -9,6 +9,7 @@ import { generateTemporaryPassword } from "@/lib/auth/password"
 import { requireBranchContext, requireApiUser } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
 import { sendStaffOnboardingEmail } from "@/lib/mail/onboarding-email"
+import { getAppUrl } from "@/lib/utils/app-url"
 import {
   paginationSchema,
   profileUpdateSchema,
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
     })
 
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+      const appUrl = getAppUrl()
       await sendStaffOnboardingEmail({
         to: created.email,
         firstName: created.firstName,

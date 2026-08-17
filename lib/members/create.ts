@@ -4,6 +4,7 @@ import { emptyToNull, MemberInviteError } from "@/lib/api/errors"
 import { generateTemporaryPassword } from "@/lib/auth/password"
 import { prisma } from "@/lib/db/prisma"
 import { sendMemberWelcomeEmail } from "@/lib/mail/onboarding-email"
+import { getAppUrl } from "@/lib/utils/app-url"
 import type { memberSchema } from "@/lib/validation/schemas"
 import type { z } from "zod"
 
@@ -86,7 +87,7 @@ export async function inviteMember({
   })
 
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+    const appUrl = getAppUrl()
     await sendMemberWelcomeEmail({
       to: email,
       firstName: created.user.firstName,
