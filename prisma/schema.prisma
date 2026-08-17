@@ -13,6 +13,7 @@ enum Role {
   PASTOR
   USHER
   FOLLOW_UP
+  MEMBER
 }
 
 enum Chapel {
@@ -91,6 +92,12 @@ enum FollowUpType {
   NOTE
 }
 
+enum SoulWinEventType {
+  PERSONAL
+  GROWTHNET
+  WINSOME
+}
+
 enum FirstTimerCreatedBy {
   SELF
   STAFF
@@ -120,6 +127,7 @@ model Branch {
   soulTrackers         SoulTracker[]
   followUpActivities   FollowUpActivity[]
   events               Event[]
+  soulWins             SoulWin[]
 
   @@index([organizationId])
 }
@@ -146,6 +154,8 @@ model User {
   createdEvents        Event[]            @relation("EventCreator")
   followUpActivities   FollowUpActivity[]
   assignedSoulTrackers SoulTracker[]      @relation("SoulAssignedTo")
+  member               Member?
+  deletedMembers       Member[]           @relation("MemberDeletedBy")
 
   @@index([branchId])
 }
@@ -154,6 +164,7 @@ model Member {
   id          String       @id @default(cuid())
   memberCode  String
   branchId    String
+  userId      String?      @unique
   firstName   String
   lastName    String
   phone       String
@@ -165,16 +176,24 @@ model Member {
   dateJoined  DateTime
   status      MemberStatus @default(ACTIVE)
   photoUrl    String?
+  isDeleted   Boolean      @default(false)
+  deletedAt   DateTime?
+  deletedById String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deletedBy   User?        @relation("MemberDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   soulTracker SoulTracker?
+  soulWins    SoulWin[]
 
   @@unique([branchId, memberCode])
   @@index([branchId])
   @@index([branchId, status])
   @@index([branchId, chapel])
+  @@index([isDeleted])
+  @@index([deletedById])
 }
 
 model FirstTimer {
@@ -293,4 +312,46 @@ model Event {
   @@index([branchId])
   @@index([branchId, status])
   @@index([branchId, startsAt])
+}
+
+model SoulWin {
+  id        String           @id @default(cuid())
+  branchId  String
+  memberId  String
+  firstName String
+  lastName  String
+  phone     String
+  email     String?
+  eventType SoulWinEventType
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@index([memberId])
+  @@index([memberId, createdAt])
+}
+
+enum SupportTopic {
+  ACCOUNT_DELETED
+  SIGN_IN
+  PASSWORD
+  PROFILE
+  OTHER
+}
+
+model SupportRequest {
+  id        String       @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  topic     SupportTopic
+  message   String
+  createdAt DateTime     @default(now())
+
+  @@index([email])
+  @@index([topic])
 }
