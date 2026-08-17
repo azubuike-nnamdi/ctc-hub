@@ -9,9 +9,23 @@ export function jsonOk<T>(data: T, status = 200) {
   return NextResponse.json({ success: true, data }, { status })
 }
 
+export class MemberInviteError extends Error {
+  status: number
+
+  constructor(message: string, status = 400) {
+    super(message)
+    this.name = "MemberInviteError"
+    this.status = status
+  }
+}
+
 export function handleRouteError(error: unknown) {
   if (error instanceof ZodError) {
     return jsonError(error.issues[0]?.message ?? "Invalid input", 400)
+  }
+
+  if (error instanceof MemberInviteError) {
+    return jsonError(error.message, error.status)
   }
 
   if (error instanceof Error && error.name === "ForbiddenError") {
