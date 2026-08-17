@@ -1,21 +1,41 @@
-# Next.js template
+# CTC Hub
 
-This is a Next.js template with shadcn/ui.
+Church management for Christ Treasure Centre (Treasure City), starting at the Yaba branch.
 
-## Adding components
+## Stack
 
-To add components to your app, run the following command:
+- Next.js App Router + TypeScript
+- Tailwind CSS + shadcn/ui
+- Prisma + Neon PostgreSQL
+- Auth.js (email/password)
+- TanStack Query
+- Zod validation
+- Husky + commitlint
+- Knip
+
+## Setup
+
+1. Copy `.env.example` to `.env` and set:
+   - `DATABASE_URL` — Neon development connection string
+   - `AUTH_SECRET` — `openssl rand -base64 32`
+   - `SEED_ADMIN_PASSWORD`
+2. Install and migrate:
 
 ```bash
-npx shadcn@latest add button
+pnpm install
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
 ```
 
-This will place the ui components in the `components` directory.
+Sign in with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`.
 
-## Using components
+See [CONTRIBUTING.md](CONTRIBUTING.md) for seeding, Mailtrap, commit conventions, and pull requests.
 
-To use the components in your app, import them as follows:
+## Scripts
 
-```tsx
-import { Button } from "@/components/ui/button";
-```
+- `pnpm dev` — local app
+- `pnpm typecheck` / `pnpm lint` / `pnpm knip`
+- `pnpm db:studio` — inspect data
+
+Commits must follow Conventional Commits (`feat`, `fix`, `chore`, …) via Husky + commitlint.
