@@ -35,14 +35,50 @@ export async function sendStaffOnboardingEmail(input: {
   temporaryPassword: string
   loginUrl: string
 }) {
+  await sendWelcomeEmail({
+    ...input,
+    heading: "You have been added to CTC Hub",
+    intro: `A super admin has onboarded you as <strong>${escapeHtml(input.roleLabel)}</strong>. Use the temporary password below, then reset it on first sign-in.`,
+    textIntro: `You have been onboarded to CTC Hub as ${input.roleLabel}.`,
+    subject: "You have been onboarded to CTC Hub",
+  })
+}
+
+export async function sendMemberWelcomeEmail(input: {
+  to: string
+  firstName: string
+  temporaryPassword: string
+  loginUrl: string
+}) {
+  await sendWelcomeEmail({
+    ...input,
+    roleLabel: "Member",
+    heading: "Welcome to CTC Hub",
+    intro:
+      "Your member account is ready. Use the temporary password below, then reset it on first sign-in.",
+    textIntro: "Your CTC Hub member account is ready.",
+    subject: "Welcome to CTC Hub",
+  })
+}
+
+async function sendWelcomeEmail(input: {
+  to: string
+  firstName: string
+  roleLabel: string
+  temporaryPassword: string
+  loginUrl: string
+  heading: string
+  intro: string
+  textIntro: string
+  subject: string
+}) {
   const name = escapeHtml(input.firstName)
   const password = escapeHtml(input.temporaryPassword)
   const loginUrl = escapeHtml(input.loginUrl)
-  const roleLabel = escapeHtml(input.roleLabel)
 
   const text = `Hello ${input.firstName},
 
-You have been onboarded to CTC Hub as ${input.roleLabel}.
+${input.textIntro}
 
 Sign in at ${input.loginUrl}
 Temporary password: ${input.temporaryPassword}
@@ -70,14 +106,14 @@ Christ Treasure Centre`
           </tr>
           <tr>
             <td style="padding:24px 32px;background:#1A90C6;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">
-              <h1 style="margin:0;font-size:24px;line-height:1.3;">You have been added to CTC Hub</h1>
+              <h1 style="margin:0;font-size:24px;line-height:1.3;">${escapeHtml(input.heading)}</h1>
             </td>
           </tr>
           <tr>
             <td style="padding:28px 32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;">
               <p style="margin:0 0 16px;font-size:16px;">Hello ${name},</p>
               <p style="margin:0 0 20px;font-size:15px;line-height:24px;">
-                A super admin has onboarded you as <strong>${roleLabel}</strong>. Use the temporary password below, then reset it on first sign-in.
+                ${input.intro}
               </p>
               <p style="margin:0 0 8px;font-size:13px;color:#5b6b7a;">Temporary password</p>
               <p style="margin:0 0 24px;font-size:20px;font-weight:700;letter-spacing:0.04em;color:#1A90C6;">${password}</p>
@@ -97,7 +133,7 @@ Christ Treasure Centre`
 
   await sendMail({
     to: input.to,
-    subject: "You have been onboarded to CTC Hub",
+    subject: input.subject,
     text,
     html,
     attachments: [await logoAttachment()],
