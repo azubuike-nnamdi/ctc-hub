@@ -4,12 +4,7 @@
  * so client and shared code must import from here instead.
  */
 
-export type Role =
-  | "SUPER_ADMIN"
-  | "ADMIN"
-  | "PASTOR"
-  | "USHER"
-  | "FOLLOW_UP"
+export type Role = "SUPER_ADMIN" | "ADMIN" | "PASTOR" | "USHER" | "FOLLOW_UP"
 
 export type Chapel = "ADULT" | "YOUTH" | "JUNIOR"
 
@@ -18,11 +13,26 @@ export type MemberStatus = "ACTIVE" | "INACTIVE"
 export type Gender = "MALE" | "FEMALE"
 
 export type FirstTimerStatus =
-  | "NEW"
-  | "CONTACTED"
-  | "VISITED"
-  | "RETURNED"
-  | "TREASURE_HUNT"
+  "NEW" | "CONTACTED" | "VISITED" | "RETURNED" | "TREASURE_HUNT"
+
+export type AgeRange = "BELOW_20" | "RANGE_20_29" | "RANGE_30_39" | "ABOVE_40"
+
+export type MembershipInterest = "YES" | "NO" | "INDECISIVE"
+
+export type HearAboutSource =
+  | "FACEBOOK"
+  | "FAMILY"
+  | "FLYER"
+  | "PREACHING"
+  | "WHATSAPP"
+  | "INSTAGRAM"
+  | "YOUTUBE"
+  | "GOOGLE_SEARCH"
+  | "WEBSITE"
+  | "EMAIL_SMS"
+  | "TV"
+  | "RADIO"
+  | "OTHER"
 
 export type SoulStage =
   | "FIRST_TIMER"
@@ -36,6 +46,13 @@ export type SoulStage =
 export type EventStatus = "DRAFT" | "SCHEDULED" | "CANCELLED" | "COMPLETED"
 
 export type FollowUpType = "CALL" | "VISIT" | "NOTE"
+
+export type FirstTimerCreatedBy = "SELF" | "STAFF"
+
+export const FIRST_TIMER_CREATED_BY = {
+  SELF: "SELF",
+  STAFF: "STAFF",
+} as const satisfies Record<string, FirstTimerCreatedBy>
 
 export const SOUL_STAGE = {
   FIRST_TIMER: "FIRST_TIMER",
