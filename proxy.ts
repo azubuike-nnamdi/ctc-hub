@@ -9,7 +9,8 @@ function isPublicPage(path: string) {
     path.startsWith("/register/") ||
     path === "/signup" ||
     path.startsWith("/signup/") ||
-    path === "/support"
+    path === "/support" ||
+    path === "/privacy"
   )
 }
 
@@ -21,7 +22,8 @@ function isPublicApi(path: string, method: string) {
     method === "POST" &&
     (path === "/api/public/first-timers" ||
       path === "/api/public/signup" ||
-      path === "/api/public/support")
+      path === "/api/public/support" ||
+      path === "/api/public/consent")
   )
 }
 

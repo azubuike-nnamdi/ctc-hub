@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { loginSchema } from "@/lib/validation/schemas"
 import { homePathForRole } from "@/lib/auth/rbac"
+import { CookiePreferencesLink } from "@/components/cookies/cookie-consent"
 
 type LoginValues = z.infer<typeof loginSchema>
 
@@ -120,6 +121,16 @@ export function LoginForm() {
             <Link href="/signup" className="font-medium text-primary">
               Sign up
             </Link>
+          </p>
+          <p className="text-center text-xs text-muted-foreground">
+            <Link
+              href="/privacy"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Privacy
+            </Link>
+            {" · "}
+            <CookiePreferencesLink />
           </p>
         </form>
       </CardContent>

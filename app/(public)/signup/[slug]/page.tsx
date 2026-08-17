@@ -1,7 +1,7 @@
 import { MemberSignupForm } from "@/components/members/member-signup-form"
+import { PublicLegalFooter } from "@/components/cookies/public-legal-footer"
 import { PageBreadcrumb } from "@/components/shared/page-breadcrumb"
 import { prisma } from "@/lib/db/prisma"
-import { APP_VERSION } from "@/lib/app-version"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
@@ -40,9 +40,7 @@ export default async function MemberSignupPage({ params }: Params) {
         />
       </div>
       <MemberSignupForm branchName={branch.name} branchSlug={branch.slug} />
-      <p className="mt-8 text-xs text-muted-foreground">
-        CTC Hub v{APP_VERSION}
-      </p>
+      <PublicLegalFooter />
     </div>
   )
 }

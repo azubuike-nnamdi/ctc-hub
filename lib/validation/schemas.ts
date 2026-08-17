@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { CONSENT_VERSION } from "@/lib/cookies/consent"
+
 export const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -224,4 +226,10 @@ export const supportRequestSchema = z.object({
     { error: "Select the support you need" }
   ),
   message: z.string().min(10, "Tell us a little more so we can help"),
+})
+
+export const cookieConsentSchema = z.object({
+  version: z.literal(CONSENT_VERSION, {
+    error: "Refresh the page and accept again",
+  }),
 })
