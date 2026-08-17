@@ -84,26 +84,26 @@ export function DashboardView({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {can(role, "members:write") ? (
           <QuickAction
-            href="/dashboard/members"
-            label="Add Member"
+            href="/admin/members"
+            label="Invite Member"
             icon={UsersIcon}
           />
         ) : null}
         {can(role, "first-timers:create") ? (
           <QuickAction
-            href="/dashboard/first-timers"
+            href="/admin/first-timers"
             label="Register First Timer"
             icon={UserPlusIcon}
           />
         ) : null}
         <QuickAction
-          href="/dashboard/soul-tracker"
+          href="/admin/soul-tracker"
           label="Soul Tracker"
           icon={WaypointsIcon}
         />
         {can(role, "events:write") ? (
           <QuickAction
-            href="/dashboard/events"
+            href="/admin/events"
             label="Create Event"
             icon={CalendarDaysIcon}
           />
