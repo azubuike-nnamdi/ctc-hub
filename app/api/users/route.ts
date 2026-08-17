@@ -1,5 +1,10 @@
 import { hash } from "bcryptjs"
-import { emptyToNull, handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
+import {
+  emptyToNull,
+  handleRouteError,
+  jsonError,
+  jsonOk,
+} from "@/lib/api/errors"
 import { generateTemporaryPassword } from "@/lib/auth/password"
 import { requireBranchContext, requireApiUser } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
@@ -29,6 +34,7 @@ export async function GET(request: Request) {
     })
 
     const where = {
+      role: { not: "MEMBER" as const },
       ...(user.role === "SUPER_ADMIN" ? {} : { branchId }),
       ...(parsed.q
         ? {
@@ -100,7 +106,7 @@ export async function POST(request: Request) {
     const assignedBranchId =
       data.role === "SUPER_ADMIN"
         ? emptyToNull(data.branchId ?? undefined)
-        : (data.branchId || branchId)
+        : data.branchId || branchId
 
     const temporaryPassword = generateTemporaryPassword()
     const created = await prisma.user.create({
@@ -160,6 +166,9 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const user = await requireApiUser()
+    if (user.role === "MEMBER") {
+      return jsonError("You do not have permission to do that.", 403)
+    }
     const data = profileUpdateSchema.parse(await request.json())
     const updated = await prisma.user.update({
       where: { id: user.id },
