@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import { SOUL_STAGE_LABELS } from "@/lib/utils/labels"
+import { SOUL_STAGE_LABELS, SOUL_WIN_EVENT_LABELS } from "@/lib/utils/labels"
 
 const styles: Record<string, string> = {
   ACTIVE:
@@ -45,6 +45,12 @@ const styles: Record<string, string> = {
     "bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
   SELF: "bg-primary/10 text-primary",
   STAFF: "bg-muted text-muted-foreground",
+  MEMBER: "bg-primary/10 text-primary",
+  PERSONAL: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+  GROWTHNET:
+    "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  WINSOME: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  DELETED: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
 }
 
 const labels: Record<string, string> = {
@@ -60,6 +66,9 @@ const labels: Record<string, string> = {
   MISSION_IGNITION: "Mission Ignition",
   SELF: "Self",
   STAFF: "Staff",
+  MEMBER: "Member",
+  DELETED: "Deleted",
+  ...SOUL_WIN_EVENT_LABELS,
 }
 
 export function StatusBadge({ value }: { value: string }) {
