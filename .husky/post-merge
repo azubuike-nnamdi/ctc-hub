@@ -1,0 +1,7 @@
+changed="$(git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null || true)"
+
+case "$changed" in
+  *package.json*|*pnpm-lock.yaml*)
+    pnpm install --frozen-lockfile
+    ;;
+esac
