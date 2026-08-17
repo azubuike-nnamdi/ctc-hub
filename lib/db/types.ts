@@ -8,6 +8,7 @@ import type {
   HearAboutSource,
   MemberStatus,
   MembershipInterest,
+  SoulWinEventType,
 } from "@/lib/db/enums"
 
 export type {
@@ -23,6 +24,8 @@ export type {
   MembershipInterest,
   Role,
   SoulStage,
+  SoulWinEventType,
+  SupportTopic,
 } from "@/lib/db/enums"
 
 /** JSON-safe member shape returned by the members API. */
@@ -30,6 +33,7 @@ export type Member = {
   id: string
   memberCode: string
   branchId: string
+  userId: string | null
   firstName: string
   lastName: string
   phone: string
@@ -41,6 +45,23 @@ export type Member = {
   dateJoined: string
   status: MemberStatus
   photoUrl: string | null
+  isDeleted: boolean
+  deletedAt: string | null
+  deletedById: string | null
+  deletedBy?: { firstName: string; lastName: string } | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type SoulWin = {
+  id: string
+  branchId: string
+  memberId: string
+  firstName: string
+  lastName: string
+  phone: string
+  email: string | null
+  eventType: SoulWinEventType
   createdAt: string
   updatedAt: string
 }
