@@ -4,7 +4,8 @@
  * so client and shared code must import from here instead.
  */
 
-export type Role = "SUPER_ADMIN" | "ADMIN" | "PASTOR" | "USHER" | "FOLLOW_UP"
+export type Role =
+  "SUPER_ADMIN" | "ADMIN" | "PASTOR" | "USHER" | "FOLLOW_UP" | "MEMBER"
 
 export type Chapel = "ADULT" | "YOUTH" | "JUNIOR"
 
@@ -49,6 +50,11 @@ export type FollowUpType = "CALL" | "VISIT" | "NOTE"
 
 export type FirstTimerCreatedBy = "SELF" | "STAFF"
 
+export type SoulWinEventType = "PERSONAL" | "GROWTHNET" | "WINSOME"
+
+export type SupportTopic =
+  "ACCOUNT_DELETED" | "SIGN_IN" | "PASSWORD" | "PROFILE" | "OTHER"
+
 export const FIRST_TIMER_CREATED_BY = {
   SELF: "SELF",
   STAFF: "STAFF",
@@ -63,3 +69,9 @@ export const SOUL_STAGE = {
   WORKER: "WORKER",
   LEADER: "LEADER",
 } as const satisfies Record<string, SoulStage>
+
+export const SOUL_WIN_EVENT_TYPE = {
+  PERSONAL: "PERSONAL",
+  GROWTHNET: "GROWTHNET",
+  WINSOME: "WINSOME",
+} as const satisfies Record<string, SoulWinEventType>
