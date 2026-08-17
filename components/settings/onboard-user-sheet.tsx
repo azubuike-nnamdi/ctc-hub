@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 
+import { ErrorState } from "@/components/shared/error-state"
+import { SectionSpinner } from "@/components/shared/query-section"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -47,7 +49,8 @@ export function OnboardUserSheet({
   const queryClient = useQueryClient()
   const branches = useQuery({
     queryKey: ["branches"],
-    queryFn: () => api<{ items: { id: string; name: string }[] }>("/api/branch"),
+    queryFn: () =>
+      api<{ items: { id: string; name: string }[] }>("/api/branch"),
     enabled: open,
   })
 
@@ -162,30 +165,45 @@ export function OnboardUserSheet({
             {role === "SUPER_ADMIN" ? null : (
               <div className="grid gap-1.5">
                 <Label>Branch</Label>
-                <Select
-                  value={form.watch("branchId") ?? ""}
-                  onValueChange={(value) =>
-                    value && form.setValue("branchId", value)
-                  }
-                  items={branches.data?.items.map((branch) => ({
-                    value: branch.id,
-                    label: branch.name,
-                  }))}
-                >
-                  <SelectTrigger
-                    className="w-full"
-                    aria-invalid={Boolean(form.formState.errors.branchId)}
+                {branches.isPending ? (
+                  <SectionSpinner
+                    label="Loading branches..."
+                    className="py-6"
+                  />
+                ) : branches.isError ? (
+                  <ErrorState
+                    compact
+                    title="Could not load branches."
+                    description={branches.error?.message}
+                    onRetry={() => branches.refetch()}
+                    isRetrying={branches.isFetching}
+                  />
+                ) : (
+                  <Select
+                    value={form.watch("branchId") ?? ""}
+                    onValueChange={(value) =>
+                      value && form.setValue("branchId", value)
+                    }
+                    items={branches.data?.items.map((branch) => ({
+                      value: branch.id,
+                      label: branch.name,
+                    }))}
                   >
-                    <SelectValue placeholder="Select a branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.data?.items.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectTrigger
+                      className="w-full"
+                      aria-invalid={Boolean(form.formState.errors.branchId)}
+                    >
+                      <SelectValue placeholder="Select a branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.data?.items.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {form.formState.errors.branchId ? (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.branchId.message}
