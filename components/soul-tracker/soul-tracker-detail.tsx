@@ -5,6 +5,11 @@ import { useState } from "react"
 import { toast } from "sonner"
 import type { SoulStage } from "@/lib/db/enums"
 
+import { ArrowRightIcon, NotebookPenIcon } from "lucide-react"
+
+import { EmptyState } from "@/components/shared/empty-state"
+import { useBreadcrumbLabel } from "@/components/layout/breadcrumb-label-provider"
+import { QuerySection } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,12 +51,48 @@ type Detail = {
 }
 
 export function SoulTrackerDetail({ id, role }: { id: string; role: Role }) {
-  const queryClient = useQueryClient()
-  const [note, setNote] = useState("")
   const query = useQuery({
     queryKey: ["soul-tracker", id],
     queryFn: () => api<Detail>(`/api/soul-tracker/${id}`),
   })
+  const record = query.data
+  const name = record?.member
+    ? fullName(record.member.firstName, record.member.lastName)
+    : record?.firstTimer
+      ? fullName(record.firstTimer.firstName, record.firstTimer.lastName)
+      : undefined
+
+  useBreadcrumbLabel(id, name)
+
+  return (
+    <QuerySection
+      isPending={query.isPending}
+      isError={query.isError}
+      isFetching={query.isFetching}
+      error={query.error}
+      onRetry={() => query.refetch()}
+      hasData={Boolean(query.data)}
+    >
+      {query.data ? (
+        <SoulTrackerDetailBody id={id} role={role} record={query.data} />
+      ) : null}
+    </QuerySection>
+  )
+}
+
+function SoulTrackerDetailBody({
+  id,
+  role,
+  record,
+}: {
+  id: string
+  role: Role
+  record: Detail
+}) {
+  const queryClient = useQueryClient()
+  const [note, setNote] = useState("")
+  const [draftStage, setDraftStage] = useState<SoulStage | null>(null)
+  const stage = draftStage ?? record.currentStage
 
   const updateMutation = useMutation({
     mutationFn: (payload: { currentStage?: SoulStage; notes?: string }) =>
@@ -59,8 +100,11 @@ export function SoulTrackerDetail({ id, role }: { id: string; role: Role }) {
         method: "PATCH",
         body: JSON.stringify(payload),
       }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success("Journey updated.")
+      if (variables.currentStage) {
+        setDraftStage(null)
+      }
       queryClient.invalidateQueries({ queryKey: ["soul-tracker", id] })
     },
     onError: (error: Error) => toast.error(error.message),
@@ -79,11 +123,6 @@ export function SoulTrackerDetail({ id, role }: { id: string; role: Role }) {
     },
     onError: (error: Error) => toast.error(error.message),
   })
-
-  const record = query.data
-  if (!record) {
-    return <p className="text-sm text-muted-foreground">Loading journey...</p>
-  }
 
   const name = record.member
     ? fullName(record.member.firstName, record.member.lastName)
@@ -107,29 +146,48 @@ export function SoulTrackerDetail({ id, role }: { id: string; role: Role }) {
             <span className="text-sm text-muted-foreground">
               {soulProgress(record.currentStage)}%
             </span>
-            <Progress value={soulProgress(record.currentStage)} className="w-32" />
+            <Progress
+              value={soulProgress(record.currentStage)}
+              className="w-32"
+            />
           </div>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          {SOUL_STAGES.map((stage, index) => {
-            const complete = reached.has(stage) && SOUL_STAGES.indexOf(record.currentStage) >= index
-            const current = record.currentStage === stage
+        <CardContent className="flex items-start gap-1 overflow-x-auto pb-1">
+          {SOUL_STAGES.map((item, index) => {
+            const complete =
+              reached.has(item) &&
+              SOUL_STAGES.indexOf(record.currentStage) >= index
+            const current = record.currentStage === item
+            const connectorReached =
+              SOUL_STAGES.indexOf(record.currentStage) > index
             return (
-              <div key={stage} className="min-w-28 text-center">
-                <div
-                  className={`mx-auto flex size-10 items-center justify-center rounded-full border text-xs ${
-                    current
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : complete
-                        ? "border-primary/40 bg-primary/10 text-primary"
-                        : "text-muted-foreground"
-                  }`}
-                >
-                  {index + 1}
+              <div key={item} className="flex min-w-0 items-start">
+                <div className="min-w-24 text-center">
+                  <div
+                    className={`mx-auto flex size-10 items-center justify-center rounded-full border text-xs ${
+                      current
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : complete
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {index + 1}
+                  </div>
+                  <p className="mt-2">
+                    <StatusBadge value={item} />
+                  </p>
                 </div>
-                <p className="mt-2">
-                  <StatusBadge value={stage} />
-                </p>
+                {index < SOUL_STAGES.length - 1 ? (
+                  <ArrowRightIcon
+                    aria-hidden="true"
+                    className={`mt-3 size-4 shrink-0 ${
+                      connectorReached
+                        ? "text-primary"
+                        : "text-muted-foreground/50"
+                    }`}
+                  />
+                ) : null}
               </div>
             )
           })}
@@ -143,24 +201,38 @@ export function SoulTrackerDetail({ id, role }: { id: string; role: Role }) {
           <CardContent className="grid gap-3">
             <StatusBadge value={record.currentStage} />
             {can(role, "soul-tracker:write") ? (
-              <Select
-                value={record.currentStage}
-                onValueChange={(value) => {
-                  if (value) updateMutation.mutate({ currentStage: value as SoulStage })
-                }}
-                items={SOUL_STAGE_LABELS}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SOUL_STAGES.map((stage) => (
-                    <SelectItem key={stage} value={stage}>
-                      {SOUL_STAGE_LABELS[stage]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <>
+                <Select
+                  value={stage}
+                  onValueChange={(value) => {
+                    if (value) setDraftStage(value as SoulStage)
+                  }}
+                  items={SOUL_STAGE_LABELS}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SOUL_STAGES.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {SOUL_STAGE_LABELS[item]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  className="w-fit"
+                  disabled={stage === record.currentStage}
+                  isLoading={
+                    updateMutation.isPending &&
+                    Boolean(updateMutation.variables?.currentStage)
+                  }
+                  isLoadingText="Updating..."
+                  onClick={() => updateMutation.mutate({ currentStage: stage })}
+                >
+                  Update
+                </Button>
+              </>
             ) : null}
             <p className="text-sm text-muted-foreground">
               Assigned worker:{" "}
@@ -187,7 +259,10 @@ export function SoulTrackerDetail({ id, role }: { id: string; role: Role }) {
             {can(role, "soul-tracker:write") ? (
               <>
                 <Label>Follow-up activity</Label>
-                <Textarea value={note} onChange={(event) => setNote(event.target.value)} />
+                <Textarea
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                />
                 <Button
                   onClick={() => activityMutation.mutate()}
                   disabled={!note}
@@ -207,12 +282,19 @@ export function SoulTrackerDetail({ id, role }: { id: string; role: Role }) {
         </CardHeader>
         <CardContent className="grid gap-4">
           {record.activities.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No follow-up activities yet.</p>
+            <EmptyState
+              title="No follow-up activities yet"
+              description="Notes and visits logged for this journey will appear here."
+              icon={NotebookPenIcon}
+              className="border-0 py-6"
+            />
           ) : (
             record.activities.map((activity) => (
               <div key={activity.id} className="border-b pb-3 last:border-0">
                 <StatusBadge value={activity.type} />
-                <p className="mt-2 text-sm text-muted-foreground">{activity.note}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {activity.note}
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {activity.createdBy.firstName} {activity.createdBy.lastName} ·{" "}
                   {format(new Date(activity.createdAt), "MMM d, yyyy")}
