@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PASTOR
+  USHER
+  FOLLOW_UP
+}
+
+enum Chapel {
+  ADULT
+  YOUTH
+  JUNIOR
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum FirstTimerStatus {
+  NEW
+  CONTACTED
+  VISITED
+  RETURNED
+  TREASURE_HUNT
+}
+
+enum SoulStage {
+  FIRST_TIMER
+  FOLLOW_UP
+  TREASURE_HUNT
+  MISSION_IGNITION
+  WORKER_TRAINING
+  WORKER
+  LEADER
+}
+
+enum EventStatus {
+  DRAFT
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum FollowUpType {
+  CALL
+  VISIT
+  NOTE
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  branches  Branch[]
+}
+
+model Branch {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String   @unique
+  memberSeq      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  users                User[]
+  members              Member[]
+  firstTimers          FirstTimer[]
+  soulTrackers         SoulTracker[]
+  followUpActivities   FollowUpActivity[]
+  events               Event[]
+
+  @@index([organizationId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role
+  branchId            String?
+  isActive            Boolean   @default(true)
+  mustChangePassword  Boolean   @default(false)
+  lastLoginAt         DateTime?
+  passwordResetAt     DateTime?
+  passwordChangedAt   DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  branch               Branch?            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  assignedFirstTimers  FirstTimer[]       @relation("AssignedFollowUp")
+  createdEvents        Event[]            @relation("EventCreator")
+  followUpActivities   FollowUpActivity[]
+  assignedSoulTrackers SoulTracker[]      @relation("SoulAssignedTo")
+
+  @@index([branchId])
+}
+
+model Member {
+  id          String       @id @default(cuid())
+  memberCode  String
+  branchId    String
+  firstName   String
+  lastName    String
+  phone       String
+  email       String?
+  gender      Gender
+  dateOfBirth DateTime?
+  address     String?
+  chapel      Chapel
+  dateJoined  DateTime
+  status      MemberStatus @default(ACTIVE)
+  photoUrl    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  soulTracker SoulTracker?
+
+  @@unique([branchId, memberCode])
+  @@index([branchId])
+  @@index([branchId, status])
+  @@index([branchId, chapel])
+}
+
+model FirstTimer {
+  id            String            @id @default(cuid())
+  branchId      String
+  firstName     String
+  lastName      String
+  phone         String
+  email         String?
+  address       String?
+  gender        Gender
+  invitedBy     String?
+  eventId       String?
+  prayerRequest String?
+  registeredAt  DateTime          @default(now())
+  assignedToId  String?
+  status        FirstTimerStatus  @default(NEW)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  branch      Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  event       Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  assignedTo  User?              @relation("AssignedFollowUp", fields: [assignedToId], references: [id], onDelete: SetNull)
+  soulTracker SoulTracker?
+  activities  FollowUpActivity[]
+
+  @@index([branchId])
+  @@index([branchId, status])
+  @@index([assignedToId])
+  @@index([eventId])
+}
+
+model SoulTracker {
+  id            String    @id @default(cuid())
+  branchId      String
+  firstTimerId  String?   @unique
+  memberId      String?   @unique
+  currentStage  SoulStage @default(FIRST_TIMER)
+  notes         String?
+  assignedToId  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  branch     Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  firstTimer FirstTimer?        @relation(fields: [firstTimerId], references: [id], onDelete: SetNull)
+  member     Member?            @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  assignedTo User?              @relation("SoulAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  stages     SoulStageEvent[]
+  activities FollowUpActivity[]
+
+  @@index([branchId])
+  @@index([branchId, currentStage])
+}
+
+model SoulStageEvent {
+  id            String    @id @default(cuid())
+  soulTrackerId String
+  stage         SoulStage
+  reachedAt     DateTime  @default(now())
+  note          String?
+
+  soulTracker SoulTracker @relation(fields: [soulTrackerId], references: [id], onDelete: Cascade)
+
+  @@index([soulTrackerId])
+}
+
+model FollowUpActivity {
+  id            String       @id @default(cuid())
+  branchId      String
+  firstTimerId  String?
+  soulTrackerId String?
+  type          FollowUpType
+  note          String
+  createdById   String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  firstTimer  FirstTimer?  @relation(fields: [firstTimerId], references: [id], onDelete: Cascade)
+  soulTracker SoulTracker? @relation(fields: [soulTrackerId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([branchId])
+  @@index([firstTimerId])
+  @@index([soulTrackerId])
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  branchId    String
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime
+  venue       String
+  status      EventStatus @default(SCHEDULED)
+  capacity    Int?
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy   User         @relation("EventCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  firstTimers FirstTimer[]
+
+  @@index([branchId])
+  @@index([branchId, status])
+  @@index([branchId, startsAt])
+}
