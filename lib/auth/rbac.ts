@@ -59,6 +59,15 @@ const permissions: Record<Role, Action[]> = {
     "events:read",
     "settings:profile",
   ],
+  MEMBER: [],
+}
+
+export function isMemberRole(role: Role) {
+  return role === "MEMBER"
+}
+
+export function homePathForRole(role: Role) {
+  return isMemberRole(role) ? "/dashboard" : "/admin"
 }
 
 export function can(role: Role, action: Action) {
