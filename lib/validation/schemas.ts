@@ -21,7 +21,7 @@ export const memberSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phone: z.string().min(7, "Phone is required"),
-  email: optionalEmail,
+  email: z.string().email("Enter a valid email address"),
   gender: z.enum(["MALE", "FEMALE"]),
   dateOfBirth: z.string().optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
@@ -29,6 +29,25 @@ export const memberSchema = z.object({
   dateJoined: z.string().min(1, "Date joined is required"),
   photoUrl: optionalUrl,
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+})
+
+export const memberSignupSchema = memberSchema.extend({
+  branchSlug: z.string().min(1, "Campus is required"),
+})
+
+export const memberSelfUpdateSchema = memberSchema.omit({
+  dateJoined: true,
+  status: true,
+})
+
+export const soulWinSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phone: z.string().min(7, "Phone is required"),
+  email: optionalEmail,
+  eventType: z.enum(["PERSONAL", "GROWTHNET", "WINSOME"], {
+    error: "Select an event type",
+  }),
 })
 
 const firstTimerVisitorFields = z.object({
@@ -193,4 +212,16 @@ export const paginationSchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
+})
+
+export const supportRequestSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Enter a valid email address"),
+  phone: z.string().optional().or(z.literal("")),
+  topic: z.enum(
+    ["ACCOUNT_DELETED", "SIGN_IN", "PASSWORD", "PROFILE", "OTHER"],
+    { error: "Select the support you need" }
+  ),
+  message: z.string().min(10, "Tell us a little more so we can help"),
 })
