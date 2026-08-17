@@ -60,7 +60,8 @@ export async function sendMail(options: {
   }
 
   if (!response.ok || payload.success === false) {
-    const detail = payload.errors?.join(" ") || `Mailtrap returned ${response.status}`
+    const detail =
+      payload.errors?.join(" ") || `Mailtrap returned ${response.status}`
     throw new Error(detail)
   }
 }
