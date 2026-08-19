@@ -2,9 +2,7 @@
 
 echo "🔍 Running post-merge hook..."
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" 2>/dev/null
-export PATH="$HOME/Library/pnpm:$PATH"
+. "$(dirname "$0")/pnpm.sh"
 
 changed_files="$(git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null)"
 deps_changed="$(echo "$changed_files" | grep -E '^(package\.json|pnpm-lock\.yaml)$' || true)"

@@ -2,10 +2,7 @@
 
 echo "🔍 Running pre-push hook..."
 
-export CI=true
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" 2>/dev/null
-export PATH="$HOME/Library/pnpm:$PATH"
+. "$(dirname "$0")/pnpm.sh"
 
 base_branch=""
 for candidate in origin/main origin/master main master; do
