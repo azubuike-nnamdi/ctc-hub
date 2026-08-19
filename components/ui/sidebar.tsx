@@ -83,7 +83,9 @@ function SidebarProvider({
       }
 
       // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; SameSite=Lax${
+        window.location.protocol === "https:" ? "; Secure" : ""
+      }`
     },
     [setOpenProp, open]
   )
@@ -475,7 +477,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button relative flex w-full items-center gap-2.5 overflow-hidden rounded-full py-2 pr-4 pl-5 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding,background-color,color] before:pointer-events-none before:absolute before:top-1/2 before:left-2 before:h-4 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-primary before:opacity-0 before:content-[''] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! group-data-[collapsible=icon]:before:hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-primary/10 data-active:font-medium data-active:text-foreground data-active:before:opacity-100 data-active:[&_svg]:text-primary [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+  "peer/menu-button group/menu-button relative flex w-full items-center gap-2.5 overflow-hidden rounded-full py-2 pr-4 pl-5 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding,background-color,color] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! before:pointer-events-none before:absolute before:top-1/2 before:left-2 before:h-4 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-primary before:opacity-0 before:content-[''] group-data-[collapsible=icon]:before:hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-primary/10 data-active:font-medium data-active:text-foreground data-active:before:opacity-100 [&_svg]:size-4 [&_svg]:shrink-0 data-active:[&_svg]:text-primary [&>span:last-child]:truncate",
   {
     variants: {
       variant: {

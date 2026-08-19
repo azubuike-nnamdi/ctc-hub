@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth/auth"
+import { REFRESH_COOKIE } from "@/lib/auth/constants"
 import { homePathForRole, isMemberRole } from "@/lib/auth/rbac"
 import { NextResponse } from "next/server"
 
@@ -42,6 +43,7 @@ export const proxy = auth((req) => {
   const path = req.nextUrl.pathname
   const isResetPassword = path.startsWith("/reset-password")
   const isPasswordApi = path.startsWith("/api/users/password")
+  const hasRefresh = Boolean(req.cookies.get(REFRESH_COOKIE)?.value)
   const home = role ? homePathForRole(role) : "/login"
 
   if (isPublicApi(path, req.method)) {
@@ -57,6 +59,11 @@ export const proxy = auth((req) => {
         { success: false, message: "Authentication required" },
         { status: 401 }
       )
+    }
+    if (hasRefresh) {
+      const url = new URL("/api/auth/refresh", req.nextUrl.origin)
+      url.searchParams.set("next", `${path}${req.nextUrl.search}`)
+      return NextResponse.redirect(url)
     }
     return NextResponse.redirect(new URL("/login", req.nextUrl))
   }

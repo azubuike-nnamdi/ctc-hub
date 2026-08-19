@@ -16,8 +16,25 @@ const optionalEmail = z
 const optionalUrl = z
   .string()
   .url("Enter a valid URL")
+  .refine(
+    (value) => {
+      try {
+        return new URL(value).protocol === "https:"
+      } catch {
+        return false
+      }
+    },
+    { message: "Photo URL must use https" }
+  )
   .optional()
   .or(z.literal(""))
+
+const newPasswordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .refine((value) => /[A-Za-z]/.test(value) && /\d/.test(value), {
+    message: "Use letters and a number",
+  })
 
 export const memberSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -191,7 +208,7 @@ export const userCreateSchema = z
 export const passwordResetSchema = z
   .object({
     currentPassword: z.string().min(8, "Current password is required"),
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    newPassword: newPasswordSchema,
     confirmPassword: z.string().min(8, "Confirm your new password"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

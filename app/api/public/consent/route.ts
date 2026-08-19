@@ -2,6 +2,8 @@ import { cookies } from "next/headers"
 
 import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
 import { auth } from "@/lib/auth/auth"
+import { PUBLIC_WINDOW_MS } from "@/lib/auth/constants"
+import { clientIp, consumeRateLimit } from "@/lib/auth/rate-limit"
 import {
   CONSENT_COOKIE,
   CONSENT_MAX_AGE,
@@ -21,6 +23,11 @@ function userAgent(request: Request) {
 /** Intentionally public. Anonymous visitors can accept the notice. */
 export async function POST(request: Request) {
   try {
+    await consumeRateLimit(
+      `public:consent:${clientIp(request)}`,
+      20,
+      PUBLIC_WINDOW_MS
+    )
     const data = cookieConsentSchema.parse(await request.json())
     const session = await auth()
     const acceptedAt = new Date()

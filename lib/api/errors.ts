@@ -19,13 +19,27 @@ export class MemberInviteError extends Error {
   }
 }
 
+export class HttpError extends Error {
+  status: number
+
+  constructor(message: string, status = 400) {
+    super(message)
+    this.name = "HttpError"
+    this.status = status
+  }
+}
+
 export function handleRouteError(error: unknown) {
   if (error instanceof ZodError) {
     return jsonError(error.issues[0]?.message ?? "Invalid input", 400)
   }
 
-  if (error instanceof MemberInviteError) {
+  if (error instanceof MemberInviteError || error instanceof HttpError) {
     return jsonError(error.message, error.status)
+  }
+
+  if (error instanceof Error && error.name === "RateLimitError") {
+    return jsonError("Too many attempts. Try again later.", 429)
   }
 
   if (error instanceof Error && error.name === "ForbiddenError") {
@@ -34,6 +48,10 @@ export function handleRouteError(error: unknown) {
 
   if (error instanceof Error && error.name === "UnauthorizedError") {
     return jsonError("Authentication required", 401)
+  }
+
+  if (error instanceof Error && error.name === "PasswordResetRequiredError") {
+    return jsonError("Password reset required", 401)
   }
 
   console.error(error)

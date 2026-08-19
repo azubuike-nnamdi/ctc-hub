@@ -18,7 +18,7 @@ export const CONSENT_CATEGORIES: ConsentCategory[] = [
   {
     id: "necessary",
     title: "Necessary cookies",
-    body: "These keep you signed in and protect the login form. They include the Auth.js session and security cookies. The site cannot work without them.",
+    body: "These keep you signed in and protect the login form. They include the Auth.js session, the refresh cookie, and security cookies. The site cannot work without them.",
   },
   {
     id: "functional",

@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation"
+import type { Session } from "next-auth"
+
 import { auth } from "@/lib/auth/auth"
 import { resolveBranchId } from "@/lib/auth/branch"
 import {
@@ -9,28 +11,107 @@ import {
 } from "@/lib/auth/rbac"
 import { prisma } from "@/lib/db/prisma"
 
+export type AuthUser = Session["user"]
+
 function forbidden(): never {
   const error = new Error("Forbidden")
   error.name = "ForbiddenError"
   throw error
 }
 
-export async function requireUser() {
+function unauthorized(): never {
+  const error = new Error("Unauthorized")
+  error.name = "UnauthorizedError"
+  throw error
+}
+
+function passwordResetRequired(): never {
+  const error = new Error("Password reset required")
+  error.name = "PasswordResetRequiredError"
+  throw error
+}
+
+function toAuthUser(user: {
+  id: string
+  email: string
+  role: AuthUser["role"]
+  branchId: string | null
+  firstName: string
+  lastName: string
+  mustChangePassword: boolean
+}): AuthUser {
+  return {
+    id: user.id,
+    email: user.email,
+    name: `${user.firstName} ${user.lastName}`,
+    role: user.role,
+    branchId: user.branchId,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    mustChangePassword: user.mustChangePassword,
+  }
+}
+
+async function loadLiveUser(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    include: { member: { select: { isDeleted: true } } },
+  })
+}
+
+function isUsableAccount(
+  user: NonNullable<Awaited<ReturnType<typeof loadLiveUser>>>
+) {
+  return user.isActive && !user.member?.isDeleted
+}
+
+async function liveUserFromToken() {
   const session = await auth()
+  if (!session?.user?.id) {
+    return { session: null, user: null }
+  }
+
+  const user = await loadLiveUser(session.user.id)
+  if (!user || !isUsableAccount(user)) {
+    return { session, user: null }
+  }
+
+  return { session, user }
+}
+
+export async function requireUser() {
+  const { session, user } = await liveUserFromToken()
   if (!session?.user?.id) {
     redirect("/login")
   }
-  return session.user
+  if (!user) {
+    redirect("/api/auth/logout")
+  }
+  if (
+    session.user.role !== user.role ||
+    Boolean(session.user.mustChangePassword) !== user.mustChangePassword
+  ) {
+    redirect(
+      `/api/auth/refresh?next=${encodeURIComponent(homePathForRole(user.role))}`
+    )
+  }
+  if (user.mustChangePassword) {
+    redirect("/reset-password")
+  }
+  return toAuthUser(user)
 }
 
-export async function requireApiUser() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    const error = new Error("Unauthorized")
-    error.name = "UnauthorizedError"
-    throw error
+export async function requireApiUser(options?: {
+  allowMustChangePassword?: boolean
+}) {
+  const { user } = await liveUserFromToken()
+  if (!user) {
+    unauthorized()
   }
-  return session.user
+  if (user.mustChangePassword && !options?.allowMustChangePassword) {
+    passwordResetRequired()
+  }
+  return toAuthUser(user)
 }
 
 export async function requireStaffUser() {
@@ -46,15 +127,6 @@ export async function requireMemberUser() {
   if (!isMemberRole(user.role)) {
     redirect("/admin")
   }
-
-  const member = await prisma.member.findUnique({
-    where: { userId: user.id },
-    select: { isDeleted: true },
-  })
-  if (member?.isDeleted) {
-    redirect("/support?reason=deleted")
-  }
-
   return user
 }
 
