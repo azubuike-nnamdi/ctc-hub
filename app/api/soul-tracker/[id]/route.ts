@@ -1,4 +1,10 @@
-import { emptyToNull, handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
+import {
+  emptyToNull,
+  handleRouteError,
+  jsonError,
+  jsonOk,
+} from "@/lib/api/errors"
+import { assertAssignedUserInBranch } from "@/lib/auth/branch-refs"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
 import { soulTrackerUpdateSchema } from "@/lib/validation/schemas"
@@ -45,32 +51,34 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     const data = soulTrackerUpdateSchema.parse(await request.json())
+    const assignedToId =
+      data.assignedToId === undefined
+        ? existing.assignedToId
+        : emptyToNull(data.assignedToId ?? undefined)
+    await assertAssignedUserInBranch(assignedToId, branchId)
     const updated = await prisma.$transaction(async (tx) => {
       const next = await tx.soulTracker.update({
         where: { id },
         data: {
           currentStage: data.currentStage ?? existing.currentStage,
           notes: data.notes === undefined ? existing.notes : data.notes,
-          assignedToId:
-            data.assignedToId === undefined
-              ? existing.assignedToId
-              : emptyToNull(data.assignedToId ?? undefined),
+          assignedToId,
         },
       })
 
-          if (data.currentStage && data.currentStage !== existing.currentStage) {
-            const already = await tx.soulStageEvent.findFirst({
-              where: { soulTrackerId: id, stage: data.currentStage },
-            })
-            if (!already) {
-              await tx.soulStageEvent.create({
-                data: {
-                  soulTrackerId: id,
-                  stage: data.currentStage,
-                },
-              })
-            }
-          }
+      if (data.currentStage && data.currentStage !== existing.currentStage) {
+        const already = await tx.soulStageEvent.findFirst({
+          where: { soulTrackerId: id, stage: data.currentStage },
+        })
+        if (!already) {
+          await tx.soulStageEvent.create({
+            data: {
+              soulTrackerId: id,
+              stage: data.currentStage,
+            },
+          })
+        }
+      }
 
       return next
     })

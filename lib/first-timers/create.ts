@@ -1,4 +1,5 @@
 import { emptyToNull } from "@/lib/api/errors"
+import { assertBranchRefs } from "@/lib/auth/branch-refs"
 import {
   FIRST_TIMER_CREATED_BY,
   SOUL_STAGE,
@@ -31,6 +32,8 @@ export async function createFirstTimerRecord({
   address?: string | null
   soulNote: string
 }) {
+  await assertBranchRefs({ assignedToId, eventId, branchId })
+
   return prisma.$transaction(async (tx) => {
     const created = await tx.firstTimer.create({
       data: {

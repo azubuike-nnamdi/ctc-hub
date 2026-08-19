@@ -7,7 +7,9 @@ type Params = { params: Promise<{ id: string }> }
 
 export async function POST(request: Request, { params }: Params) {
   try {
-    const { user, branchId } = await requireBranchContext("first-timers:follow-up")
+    const { user, branchId } = await requireBranchContext(
+      "first-timers:follow-up"
+    )
     const { id } = await params
     const firstTimer = await prisma.firstTimer.findFirst({
       where: { id, branchId },

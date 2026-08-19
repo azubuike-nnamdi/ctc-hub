@@ -4,6 +4,10 @@ import {
   jsonError,
   jsonOk,
 } from "@/lib/api/errors"
+import {
+  assertAssignedUserInBranch,
+  assertBranchRefs,
+} from "@/lib/auth/branch-refs"
 import { can } from "@/lib/auth/rbac"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
@@ -64,14 +68,16 @@ export async function PATCH(request: Request, { params }: Params) {
         return jsonError("Ushers cannot update follow-up status.", 403)
       }
       const data = firstTimerStatusSchema.parse(body)
+      const assignedToId =
+        data.assignedToId === undefined
+          ? existing.assignedToId
+          : emptyToNull(data.assignedToId ?? undefined)
+      await assertAssignedUserInBranch(assignedToId, branchId)
       const updated = await prisma.firstTimer.update({
         where: { id },
         data: {
           status: data.status,
-          assignedToId:
-            data.assignedToId === undefined
-              ? existing.assignedToId
-              : emptyToNull(data.assignedToId ?? undefined),
+          assignedToId,
         },
       })
       return jsonOk(updated)
@@ -88,6 +94,11 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     const data = firstTimerSchema.parse(body)
+    await assertBranchRefs({
+      assignedToId: data.assignedToId,
+      eventId: data.eventId,
+      branchId,
+    })
     const updated = await prisma.firstTimer.update({
       where: { id },
       data: {
