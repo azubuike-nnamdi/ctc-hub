@@ -5,6 +5,7 @@ import {
   jsonOk,
 } from "@/lib/api/errors"
 import { requireBranchContext } from "@/lib/auth/session"
+import { revokeRefreshTokens } from "@/lib/auth/tokens"
 import { prisma } from "@/lib/db/prisma"
 import { memberSchema } from "@/lib/validation/schemas"
 
@@ -83,6 +84,9 @@ export async function PATCH(request: Request, { params }: Params) {
           where: { id: existing.userId },
           data: { isActive: body.status === "ACTIVE" },
         })
+        if (body.status === "INACTIVE") {
+          await revokeRefreshTokens(existing.userId)
+        }
       }
       return jsonOk(member)
     }
@@ -152,6 +156,7 @@ export async function DELETE(_request: Request, { params }: Params) {
         where: { id: existing.userId },
         data: { isActive: false },
       })
+      await revokeRefreshTokens(existing.userId)
     }
     return jsonOk(member)
   } catch (error) {

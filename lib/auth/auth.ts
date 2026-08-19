@@ -1,36 +1,31 @@
 import { compare } from "bcryptjs"
-import NextAuth, { CredentialsSignin } from "next-auth"
+import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+
+import {
+  ACCESS_MAX_AGE,
+  LOGIN_IP_MAX_ATTEMPTS,
+  LOGIN_MAX_ATTEMPTS,
+  LOGIN_WINDOW_MS,
+} from "@/lib/auth/constants"
+import {
+  clearRateLimit,
+  clientIp,
+  consumeRateLimit,
+  RateLimitError,
+} from "@/lib/auth/rate-limit"
+import {
+  clearRefreshCookie,
+  issueRefreshToken,
+  revokeCurrentRefreshToken,
+} from "@/lib/auth/tokens"
 import { prisma } from "@/lib/db/prisma"
 import { loginSchema } from "@/lib/validation/schemas"
-
-class DeletedAccountError extends CredentialsSignin {
-  code = "deleted_account"
-}
-
-const attempts = new Map<string, { count: number; resetAt: number }>()
-
-function rateLimit(key: string) {
-  const now = Date.now()
-  const current = attempts.get(key)
-
-  if (!current || current.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + 15 * 60 * 1000 })
-    return true
-  }
-
-  if (current.count >= 8) {
-    return false
-  }
-
-  current.count += 1
-  return true
-}
 
 export const { handlers, auth } = NextAuth({
   trustHost: true,
   secret: process.env.AUTH_SECRET,
-  session: { strategy: "jwt", maxAge: 60 * 60 * 8 },
+  session: { strategy: "jwt", maxAge: ACCESS_MAX_AGE },
   pages: {
     signIn: "/login",
   },
@@ -40,15 +35,32 @@ export const { handlers, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) {
           return null
         }
 
         const email = parsed.data.email.toLowerCase()
-        if (!rateLimit(email)) {
-          return null
+
+        try {
+          await consumeRateLimit(
+            `login:${email}`,
+            LOGIN_MAX_ATTEMPTS,
+            LOGIN_WINDOW_MS
+          )
+          if (request) {
+            await consumeRateLimit(
+              `login-ip:${clientIp(request)}`,
+              LOGIN_IP_MAX_ATTEMPTS,
+              LOGIN_WINDOW_MS
+            )
+          }
+        } catch (error) {
+          if (error instanceof RateLimitError) {
+            return null
+          }
+          throw error
         }
 
         const user = await prisma.user.findUnique({
@@ -67,15 +79,11 @@ export const { handlers, auth } = NextAuth({
           return null
         }
 
-        if (user.member?.isDeleted) {
-          throw new DeletedAccountError()
-        }
-
-        if (!user.isActive) {
+        if (user.member?.isDeleted || !user.isActive) {
           return null
         }
 
-        attempts.delete(email)
+        await clearRateLimit(`login:${email}`)
 
         await prisma.user.update({
           where: { id: user.id },
@@ -94,6 +102,17 @@ export const { handlers, auth } = NextAuth({
       },
     }),
   ],
+  events: {
+    async signIn({ user }) {
+      if (user.id) {
+        await issueRefreshToken(user.id)
+      }
+    },
+    async signOut() {
+      await revokeCurrentRefreshToken()
+      await clearRefreshCookie()
+    },
+  },
   callbacks: {
     jwt({ token, user }) {
       if (user) {
