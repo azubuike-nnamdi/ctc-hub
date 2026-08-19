@@ -41,18 +41,7 @@ export function LoginForm() {
     })
 
     if (result?.error) {
-      const code = "code" in result ? String(result.code ?? "") : ""
-      if (code === "deleted_account" || result.error === "deleted_account") {
-        router.push(
-          `/support?reason=deleted&email=${encodeURIComponent(values.email)}`
-        )
-        return
-      }
-      toast.error(
-        result.error === "CredentialsSignin"
-          ? "Invalid email or password."
-          : "Could not sign in. Check that the database is running and restart the app."
-      )
+      toast.error("Invalid email or password.")
       return
     }
 
