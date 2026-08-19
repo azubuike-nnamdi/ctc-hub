@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db/prisma"
 
 export async function GET() {
   try {
-    const { branchId } = await requireBranchContext()
+    const { branchId } = await requireBranchContext("first-timers:read")
     const [followUpUsers, events] = await Promise.all([
       prisma.user.findMany({
         where: {

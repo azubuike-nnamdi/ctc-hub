@@ -166,6 +166,7 @@ export function MemberFormFields({
       <div className="grid gap-1.5">
         <Label>Photo URL</Label>
         <Input
+          placeholder="https://"
           aria-invalid={Boolean(form.formState.errors.photoUrl)}
           {...form.register("photoUrl")}
         />

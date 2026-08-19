@@ -6,6 +6,9 @@ const prisma = new PrismaClient()
 async function main() {
   const email = process.env.SEED_ADMIN_EMAIL ?? "admin@treasurecity.org"
   const password = process.env.SEED_ADMIN_PASSWORD ?? ""
+  if (password.length < 8) {
+    throw new Error("Set SEED_ADMIN_PASSWORD to at least 8 characters.")
+  }
 
   const organization = await prisma.organization.upsert({
     where: { id: "org_ctc" },

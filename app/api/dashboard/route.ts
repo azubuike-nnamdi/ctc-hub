@@ -27,7 +27,7 @@ function seriesFromCounts<T extends string>(
 
 export async function GET() {
   try {
-    const { branchId } = await requireBranchContext()
+    const { branchId } = await requireBranchContext("members:read")
     const now = new Date()
     const sixMonthsAgo = startOfMonth(subMonths(now, 5))
 

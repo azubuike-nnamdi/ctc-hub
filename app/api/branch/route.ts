@@ -2,6 +2,7 @@ import { cookies } from "next/headers"
 import { z } from "zod"
 
 import { BRANCH_COOKIE } from "@/lib/auth/branch"
+import { authCookieOptions } from "@/lib/auth/cookies"
 import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
 import { requireApiUser } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
@@ -44,11 +45,11 @@ export async function POST(request: Request) {
     }
 
     const store = await cookies()
-    store.set(BRANCH_COOKIE, body.branchId, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    })
+    store.set(
+      BRANCH_COOKIE,
+      body.branchId,
+      authCookieOptions(60 * 60 * 24 * 365)
+    )
 
     return jsonOk({ ok: true })
   } catch (error) {
