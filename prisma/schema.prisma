@@ -157,8 +157,31 @@ model User {
   member               Member?
   deletedMembers       Member[]           @relation("MemberDeletedBy")
   cookieConsents       CookieConsentLog[]
+  refreshTokens        RefreshToken[]
 
   @@index([branchId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
 }
 
 model Member {
