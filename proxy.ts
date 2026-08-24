@@ -11,7 +11,8 @@ function isPublicPage(path: string) {
     path === "/signup" ||
     path.startsWith("/signup/") ||
     path === "/support" ||
-    path === "/privacy"
+    path === "/privacy" ||
+    path === "/cookies"
   )
 }
 

@@ -128,8 +128,25 @@ model Branch {
   followUpActivities   FollowUpActivity[]
   events               Event[]
   soulWins             SoulWin[]
+  qrCode               BranchQrCode?
 
   @@index([organizationId])
+}
+
+model BranchQrCode {
+  id           String   @id @default(cuid())
+  branchId     String   @unique
+  targetUrl    String
+  imagePng     Bytes
+  watermarkPng Bytes
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  branch    Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([createdById])
 }
 
 model User {
@@ -158,6 +175,7 @@ model User {
   deletedMembers       Member[]           @relation("MemberDeletedBy")
   cookieConsents       CookieConsentLog[]
   refreshTokens        RefreshToken[]
+  createdQrCodes       BranchQrCode[]
 
   @@index([branchId])
 }
@@ -383,6 +401,7 @@ model SupportRequest {
 model CookieConsentLog {
   id         String   @id @default(cuid())
   version    String
+  choice     String   @default("all")
   acceptedAt DateTime @default(now())
   userId     String?
   userAgent  String?

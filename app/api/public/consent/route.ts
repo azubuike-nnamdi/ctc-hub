@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     const created = await prisma.cookieConsentLog.create({
       data: {
         version: data.version,
+        choice: data.choice,
         acceptedAt,
         userId: session?.user?.id ?? null,
         userAgent: userAgent(request),
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
         version: data.version,
         id: created.id,
         at: created.acceptedAt.toISOString(),
+        choice: data.choice,
       }),
       {
         httpOnly: false,
