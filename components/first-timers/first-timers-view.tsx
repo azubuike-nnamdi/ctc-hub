@@ -5,9 +5,10 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import type { FirstTimer } from "@/lib/db/types"
 
-import { UserPlusIcon } from "lucide-react"
+import { QrCodeIcon, UserPlusIcon } from "lucide-react"
 
 import { FirstTimerFormSheet } from "@/components/first-timers/first-timer-form-sheet"
+import { FirstTimerQrDialog } from "@/components/first-timers/first-timer-qr-dialog"
 import type { FirstTimerVisitorValues } from "@/components/first-timers/first-timer-form-fields"
 import { EmptyState } from "@/components/shared/empty-state"
 import { ErrorState } from "@/components/shared/error-state"
@@ -84,6 +85,7 @@ export function FirstTimersView({
   const [status, setStatus] = useState("ALL")
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
   const [selected, setSelected] = useState<
     ListResponse["items"][number] | null
   >(null)
@@ -171,14 +173,20 @@ export function FirstTimersView({
         title="First Timers"
         description="Register visitors and track follow-up through Treasure Hunt."
         extra={
-          publicFormPath ? (
-            <Button
-              variant="outline"
-              render={<Link href={publicFormPath} target="_blank" />}
-            >
-              Public form
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setQrOpen(true)}>
+              <QrCodeIcon />
+              QR code
             </Button>
-          ) : undefined
+            {publicFormPath ? (
+              <Button
+                variant="outline"
+                render={<Link href={publicFormPath} target="_blank" />}
+              >
+                Public form
+              </Button>
+            ) : null}
+          </div>
         }
         action={
           can(role, "first-timers:create")
@@ -531,6 +539,7 @@ export function FirstTimersView({
           ) : null}
         </SheetContent>
       </Sheet>
+      <FirstTimerQrDialog open={qrOpen} onOpenChange={setQrOpen} />
     </div>
   )
 }
