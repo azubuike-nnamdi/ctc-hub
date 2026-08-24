@@ -116,7 +116,14 @@ export function LoginForm() {
               href="/privacy"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Privacy
+              Privacy Policy
+            </Link>
+            {" · "}
+            <Link
+              href="/cookies"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Cookie Policy
             </Link>
             {" · "}
             <CookiePreferencesLink />

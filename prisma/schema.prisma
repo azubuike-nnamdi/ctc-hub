@@ -383,6 +383,7 @@ model SupportRequest {
 model CookieConsentLog {
   id         String   @id @default(cuid())
   version    String
+  choice     String   @default("all")
   acceptedAt DateTime @default(now())
   userId     String?
   userAgent  String?

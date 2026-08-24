@@ -249,4 +249,7 @@ export const cookieConsentSchema = z.object({
   version: z.literal(CONSENT_VERSION, {
     error: "Refresh the page and accept again",
   }),
+  choice: z.enum(["all", "necessary"], {
+    error: "Choose whether to allow optional cookies",
+  }),
 })
