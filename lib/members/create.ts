@@ -4,6 +4,7 @@ import { emptyToNull, MemberInviteError } from "@/lib/api/errors"
 import { generateTemporaryPassword } from "@/lib/auth/password"
 import { prisma } from "@/lib/db/prisma"
 import { sendMemberWelcomeEmail } from "@/lib/mail/onboarding-email"
+import { memberSoulTrackerCreate } from "@/lib/members/serialize"
 import { getAppUrl } from "@/lib/utils/app-url"
 import type { memberSchema } from "@/lib/validation/schemas"
 import type { z } from "zod"
@@ -80,6 +81,9 @@ export async function inviteMember({
         chapel: data.chapel,
         dateJoined: new Date(data.dateJoined),
         photoUrl: emptyToNull(data.photoUrl),
+        soulTracker: {
+          create: memberSoulTrackerCreate(branchId),
+        },
       },
     })
 
