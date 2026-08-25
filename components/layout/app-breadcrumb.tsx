@@ -25,6 +25,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   events: "Events",
   settings: "Settings",
   "log-soul": "Log Soul",
+  "follow-up": "Follow-up",
   register: "Register",
   signup: "Sign up",
   support: "Support",

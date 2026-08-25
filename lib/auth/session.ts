@@ -9,6 +9,7 @@ import {
   isMemberRole,
   type Action,
 } from "@/lib/auth/rbac"
+import { memberCanFollowUp } from "@/lib/departments/follow-up"
 import { prisma } from "@/lib/db/prisma"
 
 export type AuthUser = Session["user"]
@@ -163,6 +164,15 @@ export async function requireMemberContext() {
   }
 
   return { user, member, branchId: member.branchId }
+}
+
+export async function requireFollowUpMemberContext() {
+  const context = await requireMemberContext()
+  const canFollowUp = await memberCanFollowUp(context.member.id)
+  if (!canFollowUp) {
+    forbidden()
+  }
+  return { ...context, canFollowUp: true as const }
 }
 
 export async function requirePageAccess(action: Action) {
