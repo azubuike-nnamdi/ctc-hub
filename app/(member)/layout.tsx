@@ -2,7 +2,9 @@ import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { BreadcrumbLabelProvider } from "@/components/layout/breadcrumb-label-provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { memberCanFollowUp } from "@/lib/departments/follow-up"
 import { requireMemberUser } from "@/lib/auth/session"
+import { prisma } from "@/lib/db/prisma"
 
 export default async function MemberDashboardLayout({
   children,
@@ -10,11 +12,16 @@ export default async function MemberDashboardLayout({
   children: React.ReactNode
 }) {
   const user = await requireMemberUser()
+  const member = await prisma.member.findUnique({
+    where: { userId: user.id },
+    select: { id: true },
+  })
+  const canFollowUp = member ? await memberCanFollowUp(member.id) : false
 
   return (
     <BreadcrumbLabelProvider>
       <SidebarProvider>
-        <AppSidebar role={user.role} />
+        <AppSidebar role={user.role} canFollowUp={canFollowUp} />
         <SidebarInset>
           <AppHeader
             user={user}

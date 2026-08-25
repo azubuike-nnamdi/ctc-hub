@@ -5,14 +5,17 @@ import { format } from "date-fns"
 import { toast } from "sonner"
 import { useState, type ReactNode } from "react"
 import type { Member } from "@/lib/db/types"
-import { can, type Role } from "@/lib/auth/rbac"
+import { canWriteJourney, can, type Role } from "@/lib/auth/rbac"
 
 import { MemberFormSheet } from "@/components/members/member-form-sheet"
+import { MemberDepartmentsCard } from "@/components/members/member-departments-card"
+import { MemberJourneyCard } from "@/components/members/member-journey-card"
 import { useBreadcrumbLabel } from "@/components/layout/breadcrumb-label-provider"
 import { PageHeader } from "@/components/shared/page-header"
 import { QuerySection } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,7 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { api } from "@/lib/api/client"
-import { fullName, initials } from "@/lib/utils/labels"
+import { fullName, hasCompletedSod, initials } from "@/lib/utils/labels"
 
 export function MemberProfile({ id, role }: { id: string; role: Role }) {
   const queryClient = useQueryClient()
@@ -110,6 +113,7 @@ export function MemberProfile({ id, role }: { id: string; role: Role }) {
 
   const member = query.data
   const canEdit = can(role, "members:write") && role !== "USHER"
+  const canEditJourney = canWriteJourney(role)
 
   useBreadcrumbLabel(
     id,
@@ -197,7 +201,7 @@ export function MemberProfile({ id, role }: { id: string; role: Role }) {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="grid gap-4">
                 <div className="flex flex-wrap gap-2">
                   {member.isDeleted ? (
                     <StatusBadge value="DELETED" />
@@ -206,6 +210,31 @@ export function MemberProfile({ id, role }: { id: string; role: Role }) {
                   )}
                   <StatusBadge value={member.chapel} />
                   <StatusBadge value={member.gender} />
+                  {member.soulTracker ? (
+                    <StatusBadge value={member.soulTracker.currentStage} />
+                  ) : null}
+                </div>
+                <div className="grid gap-2">
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Departments
+                  </p>
+                  {member.departments?.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {member.departments.map((department) => (
+                        <Badge
+                          key={department.id}
+                          variant="outline"
+                          className="border-primary/20 bg-primary/10 text-primary"
+                        >
+                          {department.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Not assigned to a department.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -270,6 +299,20 @@ export function MemberProfile({ id, role }: { id: string; role: Role }) {
             </Card>
           </div>
 
+          <MemberJourneyCard
+            memberId={member.id}
+            soulTracker={member.soulTracker ?? null}
+            canEdit={canEditJourney && !member.isDeleted}
+          />
+
+          <MemberDepartmentsCard
+            memberId={member.id}
+            assigned={member.departments ?? []}
+            canEdit={canEdit}
+            canJoinDepartment={hasCompletedSod(
+              member.soulTracker?.currentStage
+            )}
+          />
           <MemberFormSheet
             open={open}
             onOpenChange={setOpen}

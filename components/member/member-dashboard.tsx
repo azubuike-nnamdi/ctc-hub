@@ -3,8 +3,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
 import Link from "next/link"
-import { HeartHandshakeIcon, SettingsIcon } from "lucide-react"
+import { HeartHandshakeIcon, PhoneCallIcon, SettingsIcon } from "lucide-react"
 
+import { MyDepartmentsCard } from "@/components/member/my-departments-card"
+import { MyJourneyCard } from "@/components/member/my-journey-card"
 import { EmptyState } from "@/components/shared/empty-state"
 import { QuerySection } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -24,6 +26,11 @@ type MeResponse = {
       GROWTHNET: number
       WINSOME: number
     }
+  }
+  followUp: {
+    canFollowUp: boolean
+    assignedFirstTimers: number
+    assignedMembers: number
   }
   recentSouls: SoulWin[]
 }
@@ -45,7 +52,7 @@ export function MemberDashboard({ firstName }: { firstName: string }) {
           {greeting}, {firstName}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Your souls won, last login, and recent activity.
+          Your journey, departments, souls won, and follow-up assignments.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -59,6 +66,13 @@ export function MemberDashboard({ firstName }: { firstName: string }) {
           label="Update profile"
           icon={SettingsIcon}
         />
+        {data?.followUp.canFollowUp ? (
+          <QuickAction
+            href="/dashboard/follow-up"
+            label="Follow-up"
+            icon={PhoneCallIcon}
+          />
+        ) : null}
       </div>
       <QuerySection
         isPending={query.isPending}
@@ -70,6 +84,32 @@ export function MemberDashboard({ firstName }: { firstName: string }) {
         skeleton={<DashboardSkeleton />}
       >
         <div className="grid gap-6">
+          <MyJourneyCard
+            currentStage={data?.member.soulTracker?.currentStage ?? null}
+          />
+          <MyDepartmentsCard departments={data?.member.departments ?? []} />
+          {data?.followUp.canFollowUp ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Assigned follow-up</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {data.followUp.assignedFirstTimers} first timer
+                  {data.followUp.assignedFirstTimers === 1 ? "" : "s"} and{" "}
+                  {data.followUp.assignedMembers} member
+                  {data.followUp.assignedMembers === 1 ? "" : "s"} assigned to
+                  you.
+                </p>
+                <Link
+                  href="/dashboard/follow-up"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Open follow-up
+                </Link>
+              </CardContent>
+            </Card>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Souls won" value={data?.stats.totalSouls ?? 0} />
             <StatCard

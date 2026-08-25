@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import { SOUL_STAGE_LABELS, SOUL_WIN_EVENT_LABELS } from "@/lib/utils/labels"
+import { SOUL_STAGE_LABELS, SOUL_WIN_EVENT_LABELS, FOLLOW_UP_TYPE_LABELS } from "@/lib/utils/labels"
 
 const styles: Record<string, string> = {
   ACTIVE:
@@ -21,13 +21,22 @@ const styles: Record<string, string> = {
     "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   FIRST_TIMER: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
   FOLLOW_UP: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  MISSION_IGNITION:
-    "bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
-  WORKER_TRAINING:
-    "bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
-  WORKER:
+  MIP_IN_PROGRESS:
+    "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  MIP_COMPLETED:
     "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  LEADER: "bg-primary/10 text-primary",
+  SOD_IN_PROGRESS:
+    "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  SOD_COMPLETED:
+    "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  SOM_IN_PROGRESS:
+    "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  SOM_COMPLETED:
+    "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  SOL_IN_PROGRESS:
+    "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  SOL_COMPLETED:
+    "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   SUPER_ADMIN: "bg-primary/10 text-primary",
   ADMIN: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
   PASTOR:
@@ -55,15 +64,13 @@ const styles: Record<string, string> = {
 
 const labels: Record<string, string> = {
   ...SOUL_STAGE_LABELS,
+  ...FOLLOW_UP_TYPE_LABELS,
   PENDING_RESET: "Pending reset",
   SUPER_ADMIN: "Super Admin",
   ADMIN: "Admin",
   PASTOR: "Pastor",
   USHER: "Usher",
-  FOLLOW_UP: "Follow-up",
-  TREASURE_HUNT: "Treasure Hunt",
-  WORKER_TRAINING: "Worker Training",
-  MISSION_IGNITION: "Mission Ignition",
+  FOLLOW_UP: "Follow Up",
   SELF: "Self",
   STAFF: "Staff",
   MEMBER: "Member",

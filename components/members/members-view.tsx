@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import type { Member } from "@/lib/db/types"
+import type { Department, Member } from "@/lib/db/types"
 
 import { UsersIcon } from "lucide-react"
 
@@ -55,6 +55,7 @@ export function MembersView({ role }: { role: Role }) {
   const [chapel, setChapel] = useState("ALL")
   const [status, setStatus] = useState("ALL")
   const [gender, setGender] = useState("ALL")
+  const [departmentId, setDepartmentId] = useState("ALL")
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
 
@@ -64,12 +65,18 @@ export function MembersView({ role }: { role: Role }) {
     if (chapel !== "ALL") search.set("chapel", chapel)
     if (status !== "ALL") search.set("status", status)
     if (gender !== "ALL") search.set("gender", gender)
+    if (departmentId !== "ALL") search.set("departmentId", departmentId)
     return search.toString()
-  }, [q, chapel, status, gender, page])
+  }, [q, chapel, status, gender, departmentId, page])
 
   const statsQuery = useQuery({
     queryKey: ["members", "stats"],
     queryFn: () => api<StatsResponse>("/api/members/stats"),
+  })
+
+  const departmentsQuery = useQuery({
+    queryKey: ["departments"],
+    queryFn: () => api<Department[]>("/api/departments"),
   })
 
   const query = useQuery({
@@ -175,7 +182,11 @@ export function MembersView({ role }: { role: Role }) {
         </Select>
         <Select
           value={gender}
-          onValueChange={(value) => value && setGender(value)}
+          onValueChange={(value) => {
+            if (!value) return
+            setPage(1)
+            setGender(value)
+          }}
           items={{
             ALL: "All genders",
             MALE: "Male",
@@ -191,6 +202,36 @@ export function MembersView({ role }: { role: Role }) {
             <SelectItem value="FEMALE">Female</SelectItem>
           </SelectContent>
         </Select>
+        <Select
+          value={departmentId}
+          onValueChange={(value) => {
+            if (!value) return
+            setPage(1)
+            setDepartmentId(value)
+          }}
+          items={{
+            ALL: "All departments",
+            ...(departmentsQuery.data ?? []).reduce(
+              (items, department) => {
+                items[department.id] = department.name
+                return items
+              },
+              {} as Record<string, string>
+            ),
+          }}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Department" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All departments</SelectItem>
+            {(departmentsQuery.data ?? []).map((department) => (
+              <SelectItem key={department.id} value={department.id}>
+                {department.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <QuerySection
         isPending={query.isPending}
@@ -199,7 +240,7 @@ export function MembersView({ role }: { role: Role }) {
         error={query.error}
         onRetry={() => query.refetch()}
         hasData={Boolean(query.data)}
-        skeleton={<TableSkeleton columns={6} />}
+        skeleton={<TableSkeleton columns={8} />}
       >
         {query.data?.items.length ? (
           <div className="rounded-lg border">
@@ -210,6 +251,8 @@ export function MembersView({ role }: { role: Role }) {
                   <TableHead>Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Chapel</TableHead>
+                  <TableHead>Journey</TableHead>
+                  <TableHead>Departments</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead />
                 </TableRow>
@@ -226,6 +269,24 @@ export function MembersView({ role }: { role: Role }) {
                     <TableCell>{member.phone}</TableCell>
                     <TableCell>
                       <StatusBadge value={member.chapel} />
+                    </TableCell>
+                    <TableCell>
+                      {member.soulTracker ? (
+                        <StatusBadge value={member.soulTracker.currentStage} />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {member.departments?.length ? (
+                        <span className="text-sm">
+                          {member.departments
+                            .map((department) => department.name)
+                            .join(", ")}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {member.isDeleted ? (

@@ -5,8 +5,14 @@ import {
   jsonOk,
 } from "@/lib/api/errors"
 import { assertAssignedUserInBranch } from "@/lib/auth/branch-refs"
+import { assertFollowUpAssignee } from "@/lib/departments/follow-up"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
+import { setSoulTrackerStage } from "@/lib/soul-tracker/update-stage"
+import {
+  sendMemberWelcome,
+  promoteFirstTimerIfEligible,
+} from "@/lib/members/from-first-timer"
 import { soulTrackerUpdateSchema } from "@/lib/validation/schemas"
 
 type Params = { params: Promise<{ id: string }> }
@@ -56,34 +62,50 @@ export async function PATCH(request: Request, { params }: Params) {
         ? existing.assignedToId
         : emptyToNull(data.assignedToId ?? undefined)
     await assertAssignedUserInBranch(assignedToId, branchId)
-    const updated = await prisma.$transaction(async (tx) => {
-      const next = await tx.soulTracker.update({
+    if (assignedToId !== existing.assignedToId) {
+      await assertFollowUpAssignee(assignedToId, branchId)
+    }
+    const { updated, promotion } = await prisma.$transaction(async (tx) => {
+      const promotion =
+        data.currentStage && data.currentStage !== existing.currentStage
+          ? (await setSoulTrackerStage(tx, id, data.currentStage)).promotion
+          : await promoteFirstTimerIfEligible(tx, id, existing.currentStage)
+      const updated = await tx.soulTracker.update({
         where: { id },
         data: {
-          currentStage: data.currentStage ?? existing.currentStage,
           notes: data.notes === undefined ? existing.notes : data.notes,
           assignedToId,
         },
-      })
-
-      if (data.currentStage && data.currentStage !== existing.currentStage) {
-        const already = await tx.soulStageEvent.findFirst({
-          where: { soulTrackerId: id, stage: data.currentStage },
-        })
-        if (!already) {
-          await tx.soulStageEvent.create({
-            data: {
-              soulTrackerId: id,
-              stage: data.currentStage,
+        include: {
+          member: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              memberCode: true,
             },
-          })
-        }
-      }
-
-      return next
+          },
+          firstTimer: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+      })
+      return { updated, promotion }
     })
 
-    return jsonOk(updated)
+    if (promotion?.welcome) {
+      try {
+        await sendMemberWelcome(promotion.welcome)
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    return jsonOk({
+      ...updated,
+      promotedToMember: Boolean(promotion),
+      promotion,
+    })
   } catch (error) {
     return handleRouteError(error)
   }

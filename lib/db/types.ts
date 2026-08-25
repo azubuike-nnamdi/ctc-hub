@@ -8,6 +8,7 @@ import type {
   HearAboutSource,
   MemberStatus,
   MembershipInterest,
+  SoulStage,
   SoulWinEventType,
 } from "@/lib/db/enums"
 
@@ -27,6 +28,15 @@ export type {
   SoulWinEventType,
   SupportTopic,
 } from "@/lib/db/enums"
+
+export type Department = {
+  id: string
+  branchId: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  memberCount?: number
+}
 
 /** JSON-safe member shape returned by the members API. */
 export type Member = {
@@ -51,6 +61,8 @@ export type Member = {
   deletedBy?: { firstName: string; lastName: string } | null
   createdAt: string
   updatedAt: string
+  departments?: Array<{ id: string; name: string }>
+  soulTracker?: { id: string; currentStage: SoulStage } | null
 }
 
 export type SoulWin = {

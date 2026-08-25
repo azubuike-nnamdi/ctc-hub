@@ -5,10 +5,12 @@ import {
   HeartHandshakeIcon,
   LayoutDashboardIcon,
   LogOutIcon,
+  PhoneCallIcon,
   SettingsIcon,
   UserRoundIcon,
   UsersIcon,
   WaypointsIcon,
+  Building2Icon,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -44,6 +46,12 @@ const adminNavItems: {
     action: "members:read",
   },
   {
+    href: "/admin/departments",
+    label: "Departments",
+    icon: Building2Icon,
+    action: "members:read",
+  },
+  {
     href: "/admin/first-timers",
     label: "First Timers",
     icon: UserRoundIcon,
@@ -73,7 +81,7 @@ const memberNavItems: {
   href: string
   label: string
   icon: typeof LayoutDashboardIcon
-  action?: Action
+  followUpOnly?: boolean
 }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
   {
@@ -82,13 +90,25 @@ const memberNavItems: {
     icon: HeartHandshakeIcon,
   },
   {
+    href: "/dashboard/follow-up",
+    label: "Follow-up",
+    icon: PhoneCallIcon,
+    followUpOnly: true,
+  },
+  {
     href: "/dashboard/settings",
     label: "Settings",
     icon: SettingsIcon,
   },
 ]
 
-export function AppSidebar({ role }: { role: Role }) {
+export function AppSidebar({
+  role,
+  canFollowUp = false,
+}: {
+  role: Role
+  canFollowUp?: boolean
+}) {
   const pathname = usePathname()
   const member = isMemberRole(role)
   const navItems = member ? memberNavItems : adminNavItems
@@ -117,7 +137,15 @@ export function AppSidebar({ role }: { role: Role }) {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems
-                .filter((item) => !item.action || can(role, item.action))
+                .filter((item) => {
+                  if ("followUpOnly" in item && item.followUpOnly) {
+                    return canFollowUp
+                  }
+                  if ("action" in item && item.action) {
+                    return can(role, item.action)
+                  }
+                  return true
+                })
                 .map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton

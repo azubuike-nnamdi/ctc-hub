@@ -265,7 +265,7 @@ export function DashboardCharts({
                 <YAxis
                   type="category"
                   dataKey="label"
-                  width={118}
+                  width={136}
                   tickLine={false}
                   axisLine={false}
                   tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}

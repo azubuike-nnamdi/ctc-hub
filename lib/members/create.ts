@@ -3,16 +3,13 @@ import { hash } from "bcryptjs"
 import { emptyToNull, MemberInviteError } from "@/lib/api/errors"
 import { generateTemporaryPassword } from "@/lib/auth/password"
 import { prisma } from "@/lib/db/prisma"
-import { sendMemberWelcomeEmail } from "@/lib/mail/onboarding-email"
-import { getAppUrl } from "@/lib/utils/app-url"
+import { sendMemberWelcome } from "@/lib/members/from-first-timer"
+import { allocateMemberCode } from "@/lib/members/member-code"
+import { memberSoulTrackerCreate } from "@/lib/members/serialize"
 import type { memberSchema } from "@/lib/validation/schemas"
 import type { z } from "zod"
 
 type MemberValues = z.infer<typeof memberSchema>
-
-function memberCodePrefix(slug: string) {
-  return slug.slice(0, 3).toUpperCase()
-}
 
 export async function inviteMember({
   branchId,
@@ -42,6 +39,17 @@ export async function inviteMember({
     )
   }
 
+  const firstTimer = await findMatchingFirstTimer(branchId, {
+    email,
+    phone: data.phone,
+    firstName: data.firstName,
+    lastName: data.lastName,
+  })
+  const reusableTrackerId =
+    firstTimer?.soulTracker && !firstTimer.soulTracker.memberId
+      ? firstTimer.soulTracker.id
+      : null
+
   const temporaryPassword = generateTemporaryPassword()
   const passwordHash = await hash(temporaryPassword, 12)
 
@@ -59,11 +67,7 @@ export async function inviteMember({
       },
     })
 
-    const branch = await tx.branch.update({
-      where: { id: branchId },
-      data: { memberSeq: { increment: 1 } },
-    })
-    const memberCode = `${memberCodePrefix(branch.slug)}-${String(branch.memberSeq).padStart(4, "0")}`
+    const memberCode = await allocateMemberCode(tx, branchId)
 
     const member = await tx.member.create({
       data: {
@@ -80,21 +84,35 @@ export async function inviteMember({
         chapel: data.chapel,
         dateJoined: new Date(data.dateJoined),
         photoUrl: emptyToNull(data.photoUrl),
+        soulTracker: reusableTrackerId
+          ? { connect: { id: reusableTrackerId } }
+          : { create: memberSoulTrackerCreate(branchId) },
       },
     })
+
+    if (firstTimer) {
+      await tx.firstTimer.update({
+        where: { id: firstTimer.id },
+        data: { status: "TREASURE_HUNT" },
+      })
+    }
 
     return { member, user }
   })
 
   try {
-    const appUrl = getAppUrl()
-    await sendMemberWelcomeEmail({
+    await sendMemberWelcome({
       to: email,
       firstName: created.user.firstName,
       temporaryPassword,
-      loginUrl: `${appUrl}/login`,
     })
   } catch (error) {
+    if (reusableTrackerId) {
+      await prisma.soulTracker.update({
+        where: { id: reusableTrackerId },
+        data: { memberId: null },
+      })
+    }
     await prisma.member.delete({ where: { id: created.member.id } })
     await prisma.user.delete({ where: { id: created.user.id } })
     console.error(error)
@@ -106,4 +124,39 @@ export async function inviteMember({
   }
 
   return created.member
+}
+
+async function findMatchingFirstTimer(
+  branchId: string,
+  input: {
+    email: string
+    phone: string
+    firstName: string
+    lastName: string
+  }
+) {
+  const byEmail = await prisma.firstTimer.findFirst({
+    where: {
+      branchId,
+      email: { equals: input.email, mode: "insensitive" },
+      soulTracker: { is: { memberId: null } },
+    },
+    include: { soulTracker: { select: { id: true, memberId: true } } },
+    orderBy: { registeredAt: "desc" },
+  })
+  if (byEmail) {
+    return byEmail
+  }
+
+  return prisma.firstTimer.findFirst({
+    where: {
+      branchId,
+      phone: input.phone,
+      firstName: { equals: input.firstName, mode: "insensitive" },
+      lastName: { equals: input.lastName, mode: "insensitive" },
+      soulTracker: { is: { memberId: null } },
+    },
+    include: { soulTracker: { select: { id: true, memberId: true } } },
+    orderBy: { registeredAt: "desc" },
+  })
 }

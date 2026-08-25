@@ -74,6 +74,13 @@ export function can(role: Role, action: Action) {
   return permissions[role].includes(action)
 }
 
+export function canWriteJourney(role: Role) {
+  return (
+    can(role, "soul-tracker:write") ||
+    (can(role, "members:write") && role !== "USHER")
+  )
+}
+
 export function assertCan(role: Role, action: Action) {
   if (!can(role, action)) {
     const error = new Error("Forbidden")

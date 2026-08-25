@@ -60,6 +60,7 @@ export function LoginForm() {
           width={100}
           height={100}
           unoptimized
+          loading="eager"
         />
         <CardTitle className="text-3xl">Welcome back</CardTitle>
         <CardDescription>Please enter your details to sign in.</CardDescription>
