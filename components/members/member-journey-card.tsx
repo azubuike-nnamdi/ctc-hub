@@ -66,22 +66,21 @@ export function MemberJourneyCard({
   })
 
   return (
-    <Card className="my-5 ">
+    <Card className="my-5">
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <div>
           <CardTitle>Discipleship journey</CardTitle>
           <CardDescription>
-            First Timer, Follow Up, MIP, SOD, SOM, then SOL. Department serving
-            opens after SOD is completed.
+            First Timer, Follow Up, MIP, SOD, SOM, then SOL. Completing MIP
+            makes a first timer a member. Department serving opens after SOD is
+            completed.
           </CardDescription>
         </div>
         {soulTracker ? (
           <Button
             variant="outline"
             size="sm"
-            render={
-              <Link href={`/admin/soul-tracker/${soulTracker.id}`} />
-            }
+            render={<Link href={`/admin/soul-tracker/${soulTracker.id}`} />}
           >
             Open tracker
           </Button>

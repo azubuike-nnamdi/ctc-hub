@@ -1,20 +1,20 @@
 "use client"
 
+import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { toast } from "sonner"
 import type { SoulStage } from "@/lib/db/enums"
 
-import { NotebookPenIcon } from "lucide-react"
-
-import { EmptyState } from "@/components/shared/empty-state"
+import { FollowUpActivityForm } from "@/components/follow-up/follow-up-activity-form"
+import { FollowUpActivityList } from "@/components/follow-up/follow-up-activity-list"
+import { FollowUpAssigneeSelect } from "@/components/follow-up/follow-up-assignee-select"
 import { JourneyStepper } from "@/components/shared/journey-stepper"
 import { useBreadcrumbLabel } from "@/components/layout/breadcrumb-label-provider"
 import { QuerySection } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import {
   Select,
@@ -32,20 +32,27 @@ import {
   fullName,
   soulProgress,
 } from "@/lib/utils/labels"
-import { format } from "date-fns"
 
 type Detail = {
   id: string
   currentStage: SoulStage
   notes: string | null
-  firstTimer: { firstName: string; lastName: string } | null
-  member: { firstName: string; lastName: string } | null
-  assignedTo: { firstName: string; lastName: string } | null
+  assignedToId: string | null
+  firstTimer: { id?: string; firstName: string; lastName: string } | null
+  member: {
+    id: string
+    firstName: string
+    lastName: string
+    memberCode?: string
+  } | null
+  assignedTo: { id?: string; firstName: string; lastName: string } | null
   stages: Array<{ id: string; stage: SoulStage; reachedAt: string }>
   activities: Array<{
     id: string
     type: string
     note: string
+    contactedAt?: string
+    wouldWorshipAgain?: boolean | null
     createdAt: string
     createdBy: { firstName: string; lastName: string }
   }>
@@ -91,38 +98,69 @@ function SoulTrackerDetailBody({
   record: Detail
 }) {
   const queryClient = useQueryClient()
-  const [note, setNote] = useState("")
   const [draftStage, setDraftStage] = useState<SoulStage | null>(null)
   const stage = draftStage ?? record.currentStage
+  const canWrite = can(role, "soul-tracker:write")
+  const options = useQuery({
+    queryKey: ["options"],
+    queryFn: () =>
+      api<{
+        followUpUsers: Array<{
+          id: string
+          firstName: string
+          lastName: string
+          departments?: string[]
+        }>
+      }>("/api/options"),
+    enabled: canWrite,
+  })
 
   const updateMutation = useMutation({
-    mutationFn: (payload: { currentStage?: SoulStage; notes?: string }) =>
-      api(`/api/soul-tracker/${id}`, {
+    mutationFn: (payload: {
+      currentStage?: SoulStage
+      notes?: string
+      assignedToId?: string
+    }) =>
+      api<{
+        promotedToMember?: boolean
+        promotion?: { memberId: string; created: boolean } | null
+      }>(`/api/soul-tracker/${id}`, {
         method: "PATCH",
         body: JSON.stringify(payload),
       }),
-    onSuccess: (_data, variables) => {
-      toast.success("Journey updated.")
+    onSuccess: (data, variables) => {
+      if (data.promotedToMember && data.promotion?.created) {
+        toast.success("MIP is complete, so this first timer is now a member.")
+      } else if (data.promotedToMember) {
+        toast.success("This journey is now linked to a member record.")
+      } else {
+        toast.success("Journey updated.")
+      }
       if (variables.currentStage) {
         setDraftStage(null)
       }
       queryClient.invalidateQueries({ queryKey: ["soul-tracker", id] })
       queryClient.invalidateQueries({ queryKey: ["member"] })
       queryClient.invalidateQueries({ queryKey: ["members"] })
+      queryClient.invalidateQueries({ queryKey: ["first-timers"] })
       queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     },
     onError: (error: Error) => toast.error(error.message),
   })
 
   const activityMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (payload: {
+      type: string
+      note: string
+      contactedAt: string
+      wouldWorshipAgain: boolean | null
+    }) =>
       api(`/api/soul-tracker/${id}/activities`, {
         method: "POST",
-        body: JSON.stringify({ type: "NOTE", note }),
+        body: JSON.stringify(payload),
       }),
     onSuccess: () => {
       toast.success("Activity recorded.")
-      setNote("")
       queryClient.invalidateQueries({ queryKey: ["soul-tracker", id] })
     },
     onError: (error: Error) => toast.error(error.message),
@@ -133,12 +171,43 @@ function SoulTrackerDetailBody({
     : record.firstTimer
       ? fullName(record.firstTimer.firstName, record.firstTimer.lastName)
       : "Unknown"
+  const followUpUsers = options.data?.followUpUsers ?? []
+  const assignees =
+    record.assignedTo &&
+    record.assignedToId &&
+    !followUpUsers.some((person) => person.id === record.assignedToId)
+      ? [
+          ...followUpUsers,
+          {
+            id: record.assignedToId,
+            firstName: record.assignedTo.firstName,
+            lastName: record.assignedTo.lastName,
+          },
+        ]
+      : followUpUsers
 
   return (
     <div className="grid gap-6">
-      <div>
-        <p className="text-sm text-muted-foreground">Soul Tracker</p>
-        <h2 className="text-2xl font-semibold">{name}</h2>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm text-muted-foreground">Soul Tracker</p>
+          <h2 className="text-2xl font-semibold">{name}</h2>
+          {record.member ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Member {record.member.memberCode ?? "record"} after completing
+              MIP.
+            </p>
+          ) : null}
+        </div>
+        {record.member ? (
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href={`/admin/members/${record.member.id}`} />}
+          >
+            Open member
+          </Button>
+        ) : null}
       </div>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -164,7 +233,7 @@ function SoulTrackerDetailBody({
           </CardHeader>
           <CardContent className="grid gap-3">
             <StatusBadge value={record.currentStage} />
-            {can(role, "soul-tracker:write") ? (
+            {canWrite ? (
               <>
                 <Select
                   value={stage}
@@ -198,12 +267,27 @@ function SoulTrackerDetailBody({
                 </Button>
               </>
             ) : null}
-            <p className="text-sm text-muted-foreground">
-              Assigned worker:{" "}
-              {record.assignedTo
-                ? `${record.assignedTo.firstName} ${record.assignedTo.lastName}`
-                : "Unassigned"}
-            </p>
+            {canWrite ? (
+              <FollowUpAssigneeSelect
+                value={record.assignedToId}
+                options={assignees}
+                isPending={options.isPending}
+                isError={options.isError}
+                error={options.error ?? null}
+                isRetrying={options.isFetching}
+                onRetry={() => options.refetch()}
+                onChange={(assignedToId) => {
+                  updateMutation.mutate({ assignedToId })
+                }}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Assigned worker:{" "}
+                {record.assignedTo
+                  ? `${record.assignedTo.firstName} ${record.assignedTo.lastName}`
+                  : "Unassigned"}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -214,28 +298,20 @@ function SoulTrackerDetailBody({
             <Textarea
               defaultValue={record.notes ?? ""}
               onBlur={(event) => {
-                if (can(role, "soul-tracker:write")) {
+                if (canWrite) {
                   updateMutation.mutate({ notes: event.target.value })
                 }
               }}
-              readOnly={!can(role, "soul-tracker:write")}
+              readOnly={!canWrite}
             />
-            {can(role, "soul-tracker:write") ? (
-              <>
-                <Label>Follow-up activity</Label>
-                <Textarea
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                />
-                <Button
-                  onClick={() => activityMutation.mutate()}
-                  disabled={!note}
-                  isLoading={activityMutation.isPending}
-                  isLoadingText="Saving..."
-                >
-                  Save activity
-                </Button>
-              </>
+            {canWrite ? (
+              <FollowUpActivityForm
+                showWorshipQuestion={Boolean(record.firstTimer)}
+                isSubmitting={activityMutation.isPending}
+                onSubmit={async (values) => {
+                  await activityMutation.mutateAsync(values)
+                }}
+              />
             ) : null}
           </CardContent>
         </Card>
@@ -244,28 +320,8 @@ function SoulTrackerDetailBody({
         <CardHeader>
           <CardTitle>Engagement history</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4">
-          {record.activities.length === 0 ? (
-            <EmptyState
-              title="No follow-up activities yet"
-              description="Notes and visits logged for this journey will appear here."
-              icon={NotebookPenIcon}
-              className="border-0 py-6"
-            />
-          ) : (
-            record.activities.map((activity) => (
-              <div key={activity.id} className="border-b pb-3 last:border-0">
-                <StatusBadge value={activity.type} />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {activity.note}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {activity.createdBy.firstName} {activity.createdBy.lastName} ·{" "}
-                  {format(new Date(activity.createdAt), "MMM d, yyyy")}
-                </p>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <FollowUpActivityList activities={record.activities} />
         </CardContent>
       </Card>
     </div>
