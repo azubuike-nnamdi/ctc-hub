@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import { SOUL_STAGE_LABELS, SOUL_WIN_EVENT_LABELS } from "@/lib/utils/labels"
+import { SOUL_STAGE_LABELS, SOUL_WIN_EVENT_LABELS, FOLLOW_UP_TYPE_LABELS } from "@/lib/utils/labels"
 
 const styles: Record<string, string> = {
   ACTIVE:
@@ -64,6 +64,7 @@ const styles: Record<string, string> = {
 
 const labels: Record<string, string> = {
   ...SOUL_STAGE_LABELS,
+  ...FOLLOW_UP_TYPE_LABELS,
   PENDING_RESET: "Pending reset",
   SUPER_ADMIN: "Super Admin",
   ADMIN: "Admin",
