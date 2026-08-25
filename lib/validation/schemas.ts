@@ -161,20 +161,39 @@ export const followUpNoteSchema = z.object({
   note: z.string().min(1, "Note is required"),
 })
 
+export const soulStageSchema = z.enum([
+  "FIRST_TIMER",
+  "FOLLOW_UP",
+  "MIP_IN_PROGRESS",
+  "MIP_COMPLETED",
+  "SOD_IN_PROGRESS",
+  "SOD_COMPLETED",
+  "SOM_IN_PROGRESS",
+  "SOM_COMPLETED",
+  "SOL_IN_PROGRESS",
+  "SOL_COMPLETED",
+])
+
 export const soulTrackerUpdateSchema = z.object({
-  currentStage: z
-    .enum([
-      "FIRST_TIMER",
-      "FOLLOW_UP",
-      "TREASURE_HUNT",
-      "MISSION_IGNITION",
-      "WORKER_TRAINING",
-      "WORKER",
-      "LEADER",
-    ])
-    .optional(),
+  currentStage: soulStageSchema.optional(),
   notes: z.string().optional().nullable(),
   assignedToId: z.string().optional().nullable(),
+})
+
+export const memberJourneyUpdateSchema = z.object({
+  currentStage: soulStageSchema,
+})
+
+export const departmentSchema = z.object({
+  name: z.string().trim().min(1, "Department name is required").max(80),
+})
+
+export const departmentMemberIdsSchema = z.object({
+  memberIds: z.array(z.string().min(1)).min(1, "Select at least one member"),
+})
+
+export const memberDepartmentIdsSchema = z.object({
+  departmentIds: z.array(z.string().min(1)),
 })
 
 export const eventSchema = z
