@@ -1,5 +1,9 @@
-import type { Prisma } from "@/lib/generated/prisma"
+import type { Prisma } from "@prisma/client"
 import type { SoulStage } from "@/lib/db/enums"
+import {
+  promoteFirstTimerIfEligible,
+  type FirstTimerPromotion,
+} from "@/lib/members/from-first-timer"
 
 export async function setSoulTrackerStage(
   tx: Prisma.TransactionClient,
@@ -18,5 +22,8 @@ export async function setSoulTrackerStage(
       data: { soulTrackerId, stage },
     })
   }
-  return next
+  const promotion = await promoteFirstTimerIfEligible(tx, soulTrackerId, stage)
+  return { tracker: next, promotion }
 }
+
+export type { FirstTimerPromotion }
