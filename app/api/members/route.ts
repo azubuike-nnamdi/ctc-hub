@@ -2,6 +2,7 @@ import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
 import { inviteMember } from "@/lib/members/create"
+import { memberListInclude, serializeMember } from "@/lib/members/serialize"
 import { memberSchema, paginationSchema } from "@/lib/validation/schemas"
 
 export async function GET(request: Request) {
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
     const chapel = searchParams.get("chapel")
     const status = searchParams.get("status")
     const gender = searchParams.get("gender")
+    const departmentId = searchParams.get("departmentId")
 
     const deletedFilter =
       status === "DELETED"
@@ -32,6 +34,7 @@ export async function GET(request: Request) {
       ...deletedFilter,
       ...(chapel ? { chapel: chapel as "ADULT" | "YOUTH" | "JUNIOR" } : {}),
       ...(gender ? { gender: gender as "MALE" | "FEMALE" } : {}),
+      ...(departmentId ? { departments: { some: { departmentId } } } : {}),
       ...(parsed.q
         ? {
             OR: [
@@ -57,6 +60,7 @@ export async function GET(request: Request) {
     const [items, total] = await Promise.all([
       prisma.member.findMany({
         where,
+        include: memberListInclude,
         orderBy: { createdAt: "desc" },
         skip: (parsed.page - 1) * parsed.pageSize,
         take: parsed.pageSize,
@@ -65,7 +69,7 @@ export async function GET(request: Request) {
     ])
 
     return jsonOk({
-      items,
+      items: items.map(serializeMember),
       total,
       page: parsed.page,
       pageSize: parsed.pageSize,
