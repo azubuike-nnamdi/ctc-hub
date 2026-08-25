@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/branch-refs"
 import { can } from "@/lib/auth/rbac"
 import { requireBranchContext } from "@/lib/auth/session"
+import { assertFollowUpAssignee } from "@/lib/departments/follow-up"
 import { prisma } from "@/lib/db/prisma"
 import {
   firstTimerSchema,
@@ -26,6 +27,9 @@ export async function GET(_request: Request, { params }: Params) {
       where: { id, branchId },
       include: {
         assignedTo: { select: { id: true, firstName: true, lastName: true } },
+        createdByUser: {
+          select: { firstName: true, lastName: true },
+        },
         event: { select: { id: true, title: true } },
         activities: {
           include: {
@@ -73,6 +77,9 @@ export async function PATCH(request: Request, { params }: Params) {
           ? existing.assignedToId
           : emptyToNull(data.assignedToId ?? undefined)
       await assertAssignedUserInBranch(assignedToId, branchId)
+      if (assignedToId !== existing.assignedToId) {
+        await assertFollowUpAssignee(assignedToId, branchId)
+      }
       const updated = await prisma.firstTimer.update({
         where: { id },
         data: {
@@ -80,6 +87,12 @@ export async function PATCH(request: Request, { params }: Params) {
           assignedToId,
         },
       })
+      if (assignedToId !== existing.assignedToId) {
+        await prisma.soulTracker.updateMany({
+          where: { firstTimerId: id },
+          data: { assignedToId },
+        })
+      }
       return jsonOk(updated)
     }
 
@@ -99,6 +112,9 @@ export async function PATCH(request: Request, { params }: Params) {
       eventId: data.eventId,
       branchId,
     })
+    if (emptyToNull(data.assignedToId) !== existing.assignedToId) {
+      await assertFollowUpAssignee(data.assignedToId, branchId)
+    }
     const updated = await prisma.firstTimer.update({
       where: { id },
       data: {

@@ -1,6 +1,7 @@
 import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
+import { createFollowUpActivity } from "@/lib/follow-up/log-activity"
 import { followUpNoteSchema } from "@/lib/validation/schemas"
 
 type Params = { params: Promise<{ id: string }> }
@@ -20,15 +21,22 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     const data = followUpNoteSchema.parse(await request.json())
-    const activity = await prisma.followUpActivity.create({
-      data: {
-        branchId,
-        firstTimerId: id,
-        soulTrackerId: firstTimer.soulTracker?.id,
-        type: data.type,
-        note: data.note,
-        createdById: user.id,
-      },
+    if (data.status) {
+      await prisma.firstTimer.update({
+        where: { id },
+        data: { status: data.status },
+      })
+    }
+
+    const activity = await createFollowUpActivity({
+      branchId,
+      createdById: user.id,
+      firstTimerId: id,
+      soulTrackerId: firstTimer.soulTracker?.id,
+      type: data.type,
+      note: data.note,
+      contactedAt: data.contactedAt,
+      wouldWorshipAgain: data.wouldWorshipAgain,
     })
 
     return jsonOk(activity, 201)

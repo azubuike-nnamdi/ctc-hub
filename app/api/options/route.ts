@@ -1,20 +1,21 @@
-import { handleRouteError, jsonOk } from "@/lib/api/errors"
+import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
+import { can } from "@/lib/auth/rbac"
 import { requireBranchContext } from "@/lib/auth/session"
+import { findFollowUpUsers } from "@/lib/departments/follow-up"
 import { prisma } from "@/lib/db/prisma"
 
 export async function GET() {
   try {
-    const { branchId } = await requireBranchContext("first-timers:read")
+    const { user, branchId } = await requireBranchContext()
+    if (
+      !can(user.role, "first-timers:read") &&
+      !can(user.role, "soul-tracker:read")
+    ) {
+      return jsonError("You do not have permission to do that.", 403)
+    }
+
     const [followUpUsers, events] = await Promise.all([
-      prisma.user.findMany({
-        where: {
-          isActive: true,
-          OR: [{ branchId }, { role: "SUPER_ADMIN" }],
-          role: { in: ["FOLLOW_UP", "ADMIN", "PASTOR", "SUPER_ADMIN"] },
-        },
-        select: { id: true, firstName: true, lastName: true, role: true },
-        orderBy: { firstName: "asc" },
-      }),
+      findFollowUpUsers(branchId),
       prisma.event.findMany({
         where: { branchId, status: { in: ["SCHEDULED", "COMPLETED"] } },
         select: { id: true, title: true, startsAt: true },
