@@ -344,15 +344,17 @@ model SoulStageEvent {
 }
 
 model FollowUpActivity {
-  id            String       @id @default(cuid())
-  branchId      String
-  firstTimerId  String?
-  soulTrackerId String?
-  type          FollowUpType
-  note          String
-  createdById   String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id                 String       @id @default(cuid())
+  branchId           String
+  firstTimerId       String?
+  soulTrackerId      String?
+  type               FollowUpType
+  note               String
+  contactedAt        DateTime     @default(now())
+  wouldWorshipAgain  Boolean?
+  createdById        String
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
   firstTimer  FirstTimer?  @relation(fields: [firstTimerId], references: [id], onDelete: Cascade)
