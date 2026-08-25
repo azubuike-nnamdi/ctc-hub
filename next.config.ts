@@ -16,6 +16,7 @@ const contentSecurityPolicy = [
 ].join("; ")
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@prisma/client"],
   async headers() {
     return [
       {
