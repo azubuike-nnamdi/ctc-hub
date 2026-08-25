@@ -7,13 +7,10 @@ import {
 import { requireBranchContext } from "@/lib/auth/session"
 import { revokeRefreshTokens } from "@/lib/auth/tokens"
 import { prisma } from "@/lib/db/prisma"
+import { memberDetailInclude, serializeMember } from "@/lib/members/serialize"
 import { memberSchema } from "@/lib/validation/schemas"
 
 type Params = { params: Promise<{ id: string }> }
-
-const deletedBySelect = {
-  deletedBy: { select: { firstName: true, lastName: true } },
-} as const
 
 export async function GET(_request: Request, { params }: Params) {
   try {
@@ -21,12 +18,12 @@ export async function GET(_request: Request, { params }: Params) {
     const { id } = await params
     const member = await prisma.member.findFirst({
       where: { id, branchId },
-      include: { soulTracker: true, ...deletedBySelect },
+      include: memberDetailInclude,
     })
     if (!member) {
       return jsonError("Member not found.", 404)
     }
-    return jsonOk(member)
+    return jsonOk(serializeMember(member))
   } catch (error) {
     return handleRouteError(error)
   }
@@ -58,7 +55,7 @@ export async function PATCH(request: Request, { params }: Params) {
           deletedById: null,
           status: "ACTIVE",
         },
-        include: deletedBySelect,
+        include: memberDetailInclude,
       })
       if (existing.userId) {
         await prisma.user.update({
@@ -66,7 +63,7 @@ export async function PATCH(request: Request, { params }: Params) {
           data: { isActive: true },
         })
       }
-      return jsonOk(member)
+      return jsonOk(serializeMember(member))
     }
 
     if (existing.isDeleted) {
@@ -77,7 +74,7 @@ export async function PATCH(request: Request, { params }: Params) {
       const member = await prisma.member.update({
         where: { id },
         data: { status: body.status },
-        include: deletedBySelect,
+        include: memberDetailInclude,
       })
       if (existing.userId) {
         await prisma.user.update({
@@ -88,7 +85,7 @@ export async function PATCH(request: Request, { params }: Params) {
           await revokeRefreshTokens(existing.userId)
         }
       }
-      return jsonOk(member)
+      return jsonOk(serializeMember(member))
     }
 
     const data = memberSchema.parse(body)
@@ -108,7 +105,7 @@ export async function PATCH(request: Request, { params }: Params) {
         photoUrl: emptyToNull(data.photoUrl),
         status: data.status ?? existing.status,
       },
-      include: deletedBySelect,
+      include: memberDetailInclude,
     })
     if (existing.userId) {
       await prisma.user.update({
@@ -120,7 +117,7 @@ export async function PATCH(request: Request, { params }: Params) {
         },
       })
     }
-    return jsonOk(member)
+    return jsonOk(serializeMember(member))
   } catch (error) {
     return handleRouteError(error)
   }
@@ -149,7 +146,7 @@ export async function DELETE(_request: Request, { params }: Params) {
         deletedById: user.id,
         status: "INACTIVE",
       },
-      include: deletedBySelect,
+      include: memberDetailInclude,
     })
     if (existing.userId) {
       await prisma.user.update({
@@ -158,7 +155,7 @@ export async function DELETE(_request: Request, { params }: Params) {
       })
       await revokeRefreshTokens(existing.userId)
     }
-    return jsonOk(member)
+    return jsonOk(serializeMember(member))
   } catch (error) {
     return handleRouteError(error)
   }
