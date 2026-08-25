@@ -61,7 +61,7 @@ export function SoulTrackerList() {
     <div>
       <PageHeader
         title="Soul Tracker"
-        description="Monitor each person's discipleship journey."
+        description="Monitor each person's discipleship journey, including members."
       />
       <div className="mb-4 flex flex-wrap gap-2">
         <Input
@@ -149,7 +149,7 @@ export function SoulTrackerList() {
         ) : (
           <EmptyState
             title="No journeys yet"
-            description="Soul Tracker records are created when a first timer is registered."
+            description="Journeys start when a first timer is registered or a member is invited."
             icon={WaypointsIcon}
           />
         )}
