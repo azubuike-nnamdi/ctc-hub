@@ -159,6 +159,11 @@ export const firstTimerStatusSchema = z.object({
 export const followUpNoteSchema = z.object({
   type: z.enum(["CALL", "VISIT", "NOTE"]).default("NOTE"),
   note: z.string().min(1, "Note is required"),
+  contactedAt: z.string().optional().or(z.literal("")),
+  wouldWorshipAgain: z.boolean().nullable().optional(),
+  status: z
+    .enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "TREASURE_HUNT"])
+    .optional(),
 })
 
 export const soulStageSchema = z.enum([

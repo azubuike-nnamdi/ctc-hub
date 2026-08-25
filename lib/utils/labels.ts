@@ -3,6 +3,7 @@ import type {
   Chapel,
   FirstTimerCreatedBy,
   FirstTimerStatus,
+  FollowUpType,
   Gender,
   HearAboutSource,
   MembershipInterest,
@@ -66,6 +67,13 @@ export function journeyStepIndex(stage: SoulStage) {
   return JOURNEY_STEPS.findIndex((step) =>
     (step.stages as readonly SoulStage[]).includes(stage)
   )
+}
+
+export function hasCompletedMip(stage: SoulStage | null | undefined) {
+  if (!stage) {
+    return false
+  }
+  return SOUL_STAGES.indexOf(stage) >= SOUL_STAGES.indexOf("MIP_COMPLETED")
 }
 
 export function hasCompletedSod(stage: SoulStage | null | undefined) {
@@ -193,6 +201,17 @@ export const FIRST_TIMER_CREATED_BY_LABELS: Record<
   SELF: "Self",
   STAFF: "Staff",
 }
+
+export const FOLLOW_UP_TYPES: FollowUpType[] = ["CALL", "VISIT", "NOTE"]
+
+export const FOLLOW_UP_TYPE_LABELS: Record<FollowUpType, string> = {
+  CALL: "Call",
+  VISIT: "Visit",
+  NOTE: "Note",
+}
+
+export const FOLLOW_UP_ASSIGNEE_HINT =
+  "Only members in Mission or Follow-up can be assigned to follow up."
 
 export function soulProgress(stage: SoulStage) {
   const stepIndex = journeyStepIndex(stage)
