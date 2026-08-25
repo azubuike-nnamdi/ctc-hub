@@ -5,9 +5,10 @@ import { useState } from "react"
 import { toast } from "sonner"
 import type { SoulStage } from "@/lib/db/enums"
 
-import { ArrowRightIcon, NotebookPenIcon } from "lucide-react"
+import { NotebookPenIcon } from "lucide-react"
 
 import { EmptyState } from "@/components/shared/empty-state"
+import { JourneyStepper } from "@/components/shared/journey-stepper"
 import { useBreadcrumbLabel } from "@/components/layout/breadcrumb-label-provider"
 import { QuerySection } from "@/components/shared/query-section"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -106,6 +107,9 @@ function SoulTrackerDetailBody({
         setDraftStage(null)
       }
       queryClient.invalidateQueries({ queryKey: ["soul-tracker", id] })
+      queryClient.invalidateQueries({ queryKey: ["member"] })
+      queryClient.invalidateQueries({ queryKey: ["members"] })
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -130,9 +134,6 @@ function SoulTrackerDetailBody({
       ? fullName(record.firstTimer.firstName, record.firstTimer.lastName)
       : "Unknown"
 
-  const reached = new Set(record.stages.map((item) => item.stage))
-  reached.add(record.currentStage)
-
   return (
     <div className="grid gap-6">
       <div>
@@ -152,45 +153,8 @@ function SoulTrackerDetailBody({
             />
           </div>
         </CardHeader>
-        <CardContent className="flex items-start gap-1 overflow-x-auto pb-1">
-          {SOUL_STAGES.map((item, index) => {
-            const complete =
-              reached.has(item) &&
-              SOUL_STAGES.indexOf(record.currentStage) >= index
-            const current = record.currentStage === item
-            const connectorReached =
-              SOUL_STAGES.indexOf(record.currentStage) > index
-            return (
-              <div key={item} className="flex min-w-0 items-start">
-                <div className="min-w-24 text-center">
-                  <div
-                    className={`mx-auto flex size-10 items-center justify-center rounded-full border text-xs ${
-                      current
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : complete
-                          ? "border-primary/40 bg-primary/10 text-primary"
-                          : "text-muted-foreground"
-                    }`}
-                  >
-                    {index + 1}
-                  </div>
-                  <p className="mt-2">
-                    <StatusBadge value={item} />
-                  </p>
-                </div>
-                {index < SOUL_STAGES.length - 1 ? (
-                  <ArrowRightIcon
-                    aria-hidden="true"
-                    className={`mt-3 size-4 shrink-0 ${
-                      connectorReached
-                        ? "text-primary"
-                        : "text-muted-foreground/50"
-                    }`}
-                  />
-                ) : null}
-              </div>
-            )
-          })}
+        <CardContent>
+          <JourneyStepper stage={record.currentStage} />
         </CardContent>
       </Card>
       <div className="grid gap-6 lg:grid-cols-2">
