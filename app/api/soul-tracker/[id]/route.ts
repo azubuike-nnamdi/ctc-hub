@@ -7,6 +7,7 @@ import {
 import { assertAssignedUserInBranch } from "@/lib/auth/branch-refs"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
+import { setSoulTrackerStage } from "@/lib/soul-tracker/update-stage"
 import { soulTrackerUpdateSchema } from "@/lib/validation/schemas"
 
 type Params = { params: Promise<{ id: string }> }
@@ -57,30 +58,16 @@ export async function PATCH(request: Request, { params }: Params) {
         : emptyToNull(data.assignedToId ?? undefined)
     await assertAssignedUserInBranch(assignedToId, branchId)
     const updated = await prisma.$transaction(async (tx) => {
-      const next = await tx.soulTracker.update({
+      if (data.currentStage && data.currentStage !== existing.currentStage) {
+        await setSoulTrackerStage(tx, id, data.currentStage)
+      }
+      return tx.soulTracker.update({
         where: { id },
         data: {
-          currentStage: data.currentStage ?? existing.currentStage,
           notes: data.notes === undefined ? existing.notes : data.notes,
           assignedToId,
         },
       })
-
-      if (data.currentStage && data.currentStage !== existing.currentStage) {
-        const already = await tx.soulStageEvent.findFirst({
-          where: { soulTrackerId: id, stage: data.currentStage },
-        })
-        if (!already) {
-          await tx.soulStageEvent.create({
-            data: {
-              soulTrackerId: id,
-              stage: data.currentStage,
-            },
-          })
-        }
-      }
-
-      return next
     })
 
     return jsonOk(updated)
