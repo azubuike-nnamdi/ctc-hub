@@ -72,11 +72,14 @@ enum HearAboutSource {
 enum SoulStage {
   FIRST_TIMER
   FOLLOW_UP
-  TREASURE_HUNT
-  MISSION_IGNITION
-  WORKER_TRAINING
-  WORKER
-  LEADER
+  MIP_IN_PROGRESS
+  MIP_COMPLETED
+  SOD_IN_PROGRESS
+  SOD_COMPLETED
+  SOM_IN_PROGRESS
+  SOM_COMPLETED
+  SOL_IN_PROGRESS
+  SOL_COMPLETED
 }
 
 enum EventStatus {
@@ -129,6 +132,7 @@ model Branch {
   events               Event[]
   soulWins             SoulWin[]
   qrCode               BranchQrCode?
+  departments          Department[]
 
   @@index([organizationId])
 }
@@ -229,6 +233,7 @@ model Member {
   deletedBy   User?        @relation("MemberDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   soulTracker SoulTracker?
   soulWins    SoulWin[]
+  departments MemberDepartment[]
 
   @@unique([branchId, memberCode])
   @@index([branchId])
@@ -236,6 +241,32 @@ model Member {
   @@index([branchId, chapel])
   @@index([isDeleted])
   @@index([deletedById])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  branchId  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch  Branch             @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  members MemberDepartment[]
+
+  @@unique([branchId, name])
+  @@index([branchId])
+}
+
+model MemberDepartment {
+  memberId     String
+  departmentId String
+  createdAt    DateTime @default(now())
+
+  member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, departmentId])
+  @@index([departmentId])
 }
 
 model FirstTimer {
@@ -291,7 +322,7 @@ model SoulTracker {
 
   branch     Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
   firstTimer FirstTimer?        @relation(fields: [firstTimerId], references: [id], onDelete: SetNull)
-  member     Member?            @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  member     Member?            @relation(fields: [memberId], references: [id], onDelete: Cascade)
   assignedTo User?              @relation("SoulAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   stages     SoulStageEvent[]
   activities FollowUpActivity[]
