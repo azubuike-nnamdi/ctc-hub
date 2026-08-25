@@ -9,6 +9,7 @@ import {
   UserRoundIcon,
   UsersIcon,
   WaypointsIcon,
+  Building2Icon,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -41,6 +42,12 @@ const adminNavItems: {
     href: "/admin/members",
     label: "Members",
     icon: UsersIcon,
+    action: "members:read",
+  },
+  {
+    href: "/admin/departments",
+    label: "Departments",
+    icon: Building2Icon,
     action: "members:read",
   },
   {
