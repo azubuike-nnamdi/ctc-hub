@@ -18,6 +18,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   admin: "Admin",
   dashboard: "Dashboard",
   members: "Members",
+  departments: "Departments",
   "first-timers": "First Timers",
   qr: "QR code",
   "soul-tracker": "Soul Tracker",
