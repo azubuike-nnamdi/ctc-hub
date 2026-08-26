@@ -1,3 +1,4 @@
+import Link from "next/link"
 import type { SoulStage } from "@/lib/db/enums"
 
 import { JourneyStepper } from "@/components/shared/journey-stepper"
@@ -41,7 +42,12 @@ export function MyJourneyCard({
         </div>
         <JourneyStepper stage={stage} />
         <p className="text-sm text-muted-foreground">
-          You are currently on {SOUL_STAGE_LABELS[stage]}.
+          You are currently on {SOUL_STAGE_LABELS[stage]}. MIP and SOD complete
+          when the class is finished.{" "}
+          <Link href="/dashboard/classes" className="font-medium text-primary hover:underline">
+            Open classes
+          </Link>
+          .
         </p>
       </CardContent>
     </Card>

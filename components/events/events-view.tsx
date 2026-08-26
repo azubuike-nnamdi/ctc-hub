@@ -228,7 +228,7 @@ export function EventsView({ role }: { role: Role }) {
         ) : (
           <EmptyState
             title="No events"
-            description="Create Sunday service, Treasure Hunt, or a prayer meeting."
+            description="Create Sunday service, a midweek gathering, or a prayer meeting."
             icon={CalendarDaysIcon}
           />
         )}

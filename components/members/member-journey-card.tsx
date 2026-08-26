@@ -26,10 +26,11 @@ import {
 } from "@/components/ui/select"
 import { api } from "@/lib/api/client"
 import {
+  CLASS_COMPLETED_STAGE_HINT,
   DEPARTMENT_SOD_MESSAGE,
   hasCompletedSod,
+  journeyStageOptions,
   SOUL_STAGE_LABELS,
-  SOUL_STAGES,
   soulProgress,
 } from "@/lib/utils/labels"
 
@@ -71,9 +72,9 @@ export function MemberJourneyCard({
         <div>
           <CardTitle>Discipleship journey</CardTitle>
           <CardDescription>
-            First Timer, Follow Up, MIP, SOD, SOM, then SOL. Completing MIP
-            makes a first timer a member. Department serving opens after SOD is
-            completed.
+            First Timer, Follow Up, MIP, SOD, SOM, then SOL. Marking a first
+            timer present at MIP makes them a member. Department serving opens
+            after SOD is completed.
           </CardDescription>
         </div>
         {soulTracker ? (
@@ -110,7 +111,7 @@ export function MemberJourneyCard({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SOUL_STAGES.map((item) => (
+                {journeyStageOptions(currentStage).map((item) => (
                   <SelectItem key={item} value={item}>
                     {SOUL_STAGE_LABELS[item]}
                   </SelectItem>
@@ -126,6 +127,13 @@ export function MemberJourneyCard({
             >
               Update status
             </Button>
+            <p className="text-sm text-muted-foreground">
+              {CLASS_COMPLETED_STAGE_HINT}{" "}
+              <Link href="/admin/classes" className="font-medium text-primary hover:underline">
+                Open classes
+              </Link>
+              .
+            </p>
           </div>
         ) : null}
         <p className="text-sm text-muted-foreground">

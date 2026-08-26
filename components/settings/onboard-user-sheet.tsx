@@ -52,6 +52,7 @@ export function OnboardUserSheet({
     queryFn: () =>
       api<{ items: { id: string; name: string }[] }>("/api/branch"),
     enabled: open,
+    refetchOnMount: false,
   })
 
   const form = useForm<Values>({
@@ -91,7 +92,7 @@ export function OnboardUserSheet({
         </SheetHeader>
         <form
           className="flex min-h-0 flex-1 flex-col"
-          onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          onSubmit={(event) => event.preventDefault()}
         >
           <div className="grid flex-1 content-start gap-3 overflow-y-auto px-4">
             <div className="grid gap-1.5">
@@ -222,9 +223,12 @@ export function OnboardUserSheet({
               Cancel
             </Button>
             <Button
-              type="submit"
+              type="button"
               isLoading={mutation.isPending}
               isLoadingText="Sending..."
+              onClick={() =>
+                void form.handleSubmit((values) => mutation.mutate(values))()
+              }
             >
               Send invite
             </Button>

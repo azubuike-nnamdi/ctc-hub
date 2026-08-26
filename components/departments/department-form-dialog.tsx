@@ -53,15 +53,7 @@ export function DepartmentFormDialog({
         </DialogHeader>
         <form
           className="grid gap-4"
-          onSubmit={async (event) => {
-            event.preventDefault()
-            const trimmed = name.trim()
-            if (!trimmed) {
-              toast.error("Department name is required.")
-              return
-            }
-            await onSubmit(trimmed)
-          }}
+          onSubmit={(event) => event.preventDefault()}
         >
           <div className="grid gap-1.5">
             <Label htmlFor="department-name">Name</Label>
@@ -82,7 +74,18 @@ export function DepartmentFormDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" isLoading={isPending}>
+            <Button
+              type="button"
+              isLoading={isPending}
+              onClick={async () => {
+                const trimmed = name.trim()
+                if (!trimmed) {
+                  toast.error("Department name is required.")
+                  return
+                }
+                await onSubmit(trimmed)
+              }}
+            >
               {submitLabel}
             </Button>
           </DialogFooter>

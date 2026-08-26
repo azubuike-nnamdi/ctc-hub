@@ -64,12 +64,12 @@ export function EventFormSheet({
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
-            Service, Treasure Hunt, or another church gathering.
+            Service, midweek gathering, or another church event.
           </SheetDescription>
         </SheetHeader>
         <form
           className="flex min-h-0 flex-1 flex-col"
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={(event) => event.preventDefault()}
         >
           <div className="grid flex-1 content-start gap-3 overflow-y-auto px-4">
             <div className="grid gap-1.5">
@@ -160,9 +160,10 @@ export function EventFormSheet({
               Cancel
             </Button>
             <Button
-              type="submit"
+              type="button"
               isLoading={isSubmitting}
               isLoadingText="Saving..."
+              onClick={() => void form.handleSubmit(onSubmit)()}
             >
               Save
             </Button>

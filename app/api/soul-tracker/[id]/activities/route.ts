@@ -27,6 +27,8 @@ export async function POST(request: Request, { params }: Params) {
       note: data.note,
       contactedAt: data.contactedAt,
       wouldWorshipAgain: data.wouldWorshipAgain,
+      nextContactAt: data.nextContactAt,
+      closeFollowUp: data.closeFollowUp,
     })
 
     return jsonOk(activity, 201)

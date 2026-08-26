@@ -1,6 +1,7 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { toast } from "sonner"
 import type { FirstTimer } from "@/lib/db/types"
 import type { FirstTimerStatus } from "@/lib/db/enums"
@@ -8,8 +9,10 @@ import type { FirstTimerStatus } from "@/lib/db/enums"
 import { FollowUpActivityForm } from "@/components/follow-up/follow-up-activity-form"
 import { FollowUpActivityList } from "@/components/follow-up/follow-up-activity-list"
 import { FollowUpAssigneeSelect } from "@/components/follow-up/follow-up-assignee-select"
+import { FollowUpDueBadge } from "@/components/follow-up/follow-up-due-badge"
 import type { FirstTimerListItem } from "@/components/first-timers/types"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -30,7 +33,7 @@ import {
   AGE_RANGE_LABELS,
   FIRST_TIMER_CREATED_BY_LABELS,
   FIRST_TIMER_STATUS_LABELS,
-  FIRST_TIMER_STATUSES,
+  OPEN_FIRST_TIMER_STATUSES,
   HEAR_ABOUT_LABELS,
   MEMBERSHIP_INTEREST_LABELS,
 } from "@/lib/utils/labels"
@@ -50,6 +53,7 @@ type FirstTimerDetail = FirstTimerListItem & {
   hearAboutUs: FirstTimer["hearAboutUs"]
   hearAboutOther: string | null
   prayerRequest: string | null
+  nextContactAt?: string | null
   activities: Array<{
     id: string
     type: string
@@ -79,12 +83,43 @@ export function FirstTimerFollowUpSheet({
   onRetryOptions: () => void
 }) {
   const queryClient = useQueryClient()
+  const selectedId = selected?.id ?? null
+  const [trackedId, setTrackedId] = useState(selectedId)
+  const [draftStatus, setDraftStatus] = useState<FirstTimer["status"] | null>(
+    null
+  )
+  const [draftAssignedToId, setDraftAssignedToId] = useState<
+    string | null | undefined
+  >(undefined)
+  const [draftAssignedTo, setDraftAssignedTo] = useState<
+    FirstTimerListItem["assignedTo"] | undefined
+  >(undefined)
+
+  if (selectedId !== trackedId) {
+    setTrackedId(selectedId)
+    setDraftStatus(null)
+    setDraftAssignedToId(undefined)
+    setDraftAssignedTo(undefined)
+  }
+
   const detailQuery = useQuery({
     queryKey: ["first-timers", selected?.id],
     queryFn: () => api<FirstTimerDetail>(`/api/first-timers/${selected?.id}`),
     enabled: Boolean(selected?.id),
+    refetchOnMount: false,
   })
   const visitor = detailQuery.data ?? selected
+  const status = draftStatus ?? selected?.status
+  const assignedToId =
+    draftAssignedToId === undefined
+      ? (selected?.assignedToId ?? null)
+      : draftAssignedToId
+  const assignedTo =
+    draftAssignedTo === undefined ? (selected?.assignedTo ?? null) : draftAssignedTo
+  const followUpDirty =
+    Boolean(selected) &&
+    (status !== selected?.status ||
+      assignedToId !== (selected?.assignedToId ?? null))
 
   const statusMutation = useMutation({
     mutationFn: (payload: {
@@ -101,7 +136,7 @@ export function FirstTimerFollowUpSheet({
       }),
     onSuccess: () => {
       toast.success("Follow-up updated.")
-      queryClient.invalidateQueries({ queryKey: ["first-timers"] })
+      void queryClient.invalidateQueries({ queryKey: ["first-timers"] })
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -113,6 +148,8 @@ export function FirstTimerFollowUpSheet({
       note: string
       contactedAt: string
       wouldWorshipAgain: boolean | null
+      nextContactAt: string
+      closeFollowUp: boolean
       status?: FirstTimerStatus
     }) =>
       api(`/api/first-timers/${payload.id}/notes`, {
@@ -122,17 +159,22 @@ export function FirstTimerFollowUpSheet({
           note: payload.note,
           contactedAt: payload.contactedAt,
           wouldWorshipAgain: payload.wouldWorshipAgain,
+          nextContactAt: payload.nextContactAt,
+          closeFollowUp: payload.closeFollowUp,
           status: payload.status,
         }),
       }),
     onSuccess: () => {
       toast.success("Activity saved.")
-      queryClient.invalidateQueries({ queryKey: ["first-timers"] })
+      void queryClient.invalidateQueries({ queryKey: ["first-timers"] })
     },
     onError: (error: Error) => toast.error(error.message),
   })
 
-  const assignees = withCurrentAssignee(followUpUsers, selected)
+  const assignees = withCurrentAssignee(
+    followUpUsers,
+    selected ? { ...selected, assignedToId, assignedTo } : null
+  )
 
   return (
     <Sheet
@@ -206,58 +248,88 @@ export function FirstTimerFollowUpSheet({
               </dl>
               <div className="grid gap-1.5">
                 <Label>Status</Label>
-                <StatusBadge value={selected.status} />
-                <Select
-                  value={selected.status}
-                  onValueChange={(value) => {
-                    if (!value) return
-                    statusMutation.mutate({ id: selected.id, status: value })
-                    onSelectedChange({
-                      ...selected,
-                      status: value as FirstTimer["status"],
-                    })
-                  }}
-                  items={FIRST_TIMER_STATUS_LABELS}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FIRST_TIMER_STATUSES.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {FIRST_TIMER_STATUS_LABELS[item]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge value={status ?? selected.status} />
+                  <FollowUpDueBadge
+                    nextContactAt={
+                      detailQuery.data?.nextContactAt ?? selected.nextContactAt
+                    }
+                  />
+                </div>
+                {selected.status === "MEMBER" ? (
+                  <p className="text-sm text-muted-foreground">
+                    This visitor is now a member after MIP. They stay in this
+                    list so we can track who came through first timer. Follow-up
+                    continues on their journey.
+                  </p>
+                ) : (
+                  <Select
+                    value={status}
+                    onValueChange={(value) => {
+                      if (value) setDraftStatus(value as FirstTimer["status"])
+                    }}
+                    items={FIRST_TIMER_STATUS_LABELS}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OPEN_FIRST_TIMER_STATUSES.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {FIRST_TIMER_STATUS_LABELS[item]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <FollowUpAssigneeSelect
-                value={selected.assignedToId}
+                value={assignedToId}
                 options={assignees}
                 isPending={optionsPending}
                 isError={Boolean(optionsError)}
                 error={optionsError}
                 isRetrying={optionsFetching}
                 onRetry={onRetryOptions}
-                onChange={(assignedToId, person) => {
-                  statusMutation.mutate({
-                    id: selected.id,
-                    status: selected.status,
-                    assignedToId,
-                  })
-                  onSelectedChange({
-                    ...selected,
-                    assignedToId: assignedToId || null,
-                    assignedTo: person
+                onChange={(nextAssignedToId, person) => {
+                  setDraftAssignedToId(nextAssignedToId || null)
+                  setDraftAssignedTo(
+                    person
                       ? {
                           id: person.id,
                           firstName: person.firstName,
                           lastName: person.lastName,
                         }
-                      : null,
-                  })
+                      : null
+                  )
                 }}
               />
+              <Button
+                type="button"
+                className="w-fit"
+                disabled={!followUpDirty}
+                isLoading={statusMutation.isPending}
+                isLoadingText="Saving..."
+                onClick={() => {
+                  if (!status) return
+                  statusMutation.mutate({
+                    id: selected.id,
+                    status,
+                    assignedToId: assignedToId ?? "",
+                  })
+                  onSelectedChange({
+                    ...selected,
+                    status,
+                    assignedToId,
+                    assignedTo,
+                  })
+                  setDraftStatus(null)
+                  setDraftAssignedToId(undefined)
+                  setDraftAssignedTo(undefined)
+                }}
+              >
+                Save follow-up
+              </Button>
               <FollowUpActivityForm
                 showWorshipQuestion
                 isSubmitting={activityMutation.isPending}

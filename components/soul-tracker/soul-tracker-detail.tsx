@@ -9,6 +9,7 @@ import type { SoulStage } from "@/lib/db/enums"
 import { FollowUpActivityForm } from "@/components/follow-up/follow-up-activity-form"
 import { FollowUpActivityList } from "@/components/follow-up/follow-up-activity-list"
 import { FollowUpAssigneeSelect } from "@/components/follow-up/follow-up-assignee-select"
+import { FollowUpDueBadge } from "@/components/follow-up/follow-up-due-badge"
 import { JourneyStepper } from "@/components/shared/journey-stepper"
 import { useBreadcrumbLabel } from "@/components/layout/breadcrumb-label-provider"
 import { QuerySection } from "@/components/shared/query-section"
@@ -27,8 +28,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/lib/api/client"
 import { can, type Role } from "@/lib/auth/rbac"
 import {
+  CLASS_COMPLETED_STAGE_HINT,
+  journeyStageOptions,
   SOUL_STAGE_LABELS,
-  SOUL_STAGES,
   fullName,
   soulProgress,
 } from "@/lib/utils/labels"
@@ -38,6 +40,7 @@ type Detail = {
   currentStage: SoulStage
   notes: string | null
   assignedToId: string | null
+  nextContactAt: string | null
   firstTimer: { id?: string; firstName: string; lastName: string } | null
   member: {
     id: string
@@ -98,8 +101,16 @@ function SoulTrackerDetailBody({
   record: Detail
 }) {
   const queryClient = useQueryClient()
+  const [trackedId, setTrackedId] = useState(id)
   const [draftStage, setDraftStage] = useState<SoulStage | null>(null)
+  const [draftAssignedToId, setDraftAssignedToId] = useState<string | null>(null)
+  if (id !== trackedId) {
+    setTrackedId(id)
+    setDraftStage(null)
+    setDraftAssignedToId(null)
+  }
   const stage = draftStage ?? record.currentStage
+  const assignedToId = draftAssignedToId ?? record.assignedToId ?? ""
   const canWrite = can(role, "soul-tracker:write")
   const options = useQuery({
     queryKey: ["options"],
@@ -139,11 +150,14 @@ function SoulTrackerDetailBody({
       if (variables.currentStage) {
         setDraftStage(null)
       }
-      queryClient.invalidateQueries({ queryKey: ["soul-tracker", id] })
-      queryClient.invalidateQueries({ queryKey: ["member"] })
-      queryClient.invalidateQueries({ queryKey: ["members"] })
-      queryClient.invalidateQueries({ queryKey: ["first-timers"] })
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
+      if (variables.assignedToId !== undefined) {
+        setDraftAssignedToId(null)
+      }
+      void queryClient.invalidateQueries({ queryKey: ["soul-tracker", id] })
+      void queryClient.invalidateQueries({ queryKey: ["member"] })
+      void queryClient.invalidateQueries({ queryKey: ["members"] })
+      void queryClient.invalidateQueries({ queryKey: ["first-timers"] })
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] })
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -153,6 +167,8 @@ function SoulTrackerDetailBody({
       type: string
       note: string
       contactedAt: string
+      nextContactAt: string
+      closeFollowUp: boolean
       wouldWorshipAgain: boolean | null
     }) =>
       api(`/api/soul-tracker/${id}/activities`, {
@@ -161,7 +177,7 @@ function SoulTrackerDetailBody({
       }),
     onSuccess: () => {
       toast.success("Activity recorded.")
-      queryClient.invalidateQueries({ queryKey: ["soul-tracker", id] })
+      void queryClient.invalidateQueries({ queryKey: ["soul-tracker", id] })
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -192,6 +208,9 @@ function SoulTrackerDetailBody({
         <div>
           <p className="text-sm text-muted-foreground">Soul Tracker</p>
           <h2 className="text-2xl font-semibold">{name}</h2>
+          <div className="mt-2">
+            <FollowUpDueBadge nextContactAt={record.nextContactAt} />
+          </div>
           {record.member ? (
             <p className="mt-1 text-sm text-muted-foreground">
               Member {record.member.memberCode ?? "record"} after completing
@@ -246,38 +265,33 @@ function SoulTrackerDetailBody({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {SOUL_STAGES.map((item) => (
+                    {journeyStageOptions(record.currentStage).map((item) => (
                       <SelectItem key={item} value={item}>
                         {SOUL_STAGE_LABELS[item]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  className="w-fit"
-                  disabled={stage === record.currentStage}
-                  isLoading={
-                    updateMutation.isPending &&
-                    Boolean(updateMutation.variables?.currentStage)
-                  }
-                  isLoadingText="Updating..."
-                  onClick={() => updateMutation.mutate({ currentStage: stage })}
-                >
-                  Update
-                </Button>
+                <p className="text-sm text-muted-foreground">
+                  {CLASS_COMPLETED_STAGE_HINT}{" "}
+                  <Link href="/admin/classes" className="font-medium text-primary hover:underline">
+                    Open classes
+                  </Link>
+                  .
+                </p>
               </>
             ) : null}
             {canWrite ? (
               <FollowUpAssigneeSelect
-                value={record.assignedToId}
+                value={assignedToId || null}
                 options={assignees}
                 isPending={options.isPending}
                 isError={options.isError}
                 error={options.error ?? null}
                 isRetrying={options.isFetching}
                 onRetry={() => options.refetch()}
-                onChange={(assignedToId) => {
-                  updateMutation.mutate({ assignedToId })
+                onChange={(nextAssignedToId) => {
+                  setDraftAssignedToId(nextAssignedToId)
                 }}
               />
             ) : (
@@ -288,6 +302,30 @@ function SoulTrackerDetailBody({
                   : "Unassigned"}
               </p>
             )}
+            {canWrite ? (
+              <Button
+                type="button"
+                className="w-fit"
+                disabled={
+                  stage === record.currentStage &&
+                  assignedToId === (record.assignedToId ?? "")
+                }
+                isLoading={
+                  updateMutation.isPending &&
+                  (Boolean(updateMutation.variables?.currentStage) ||
+                    updateMutation.variables?.assignedToId !== undefined)
+                }
+                isLoadingText="Updating..."
+                onClick={() =>
+                  updateMutation.mutate({
+                    currentStage: stage,
+                    assignedToId,
+                  })
+                }
+              >
+                Update
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
         <Card>

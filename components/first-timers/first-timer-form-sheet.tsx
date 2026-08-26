@@ -54,10 +54,7 @@ export function FirstTimerFormSheet({
         </SheetHeader>
         <form
           className="flex min-h-0 flex-1 flex-col"
-          onSubmit={form.handleSubmit(async (values) => {
-            await onSubmit(values)
-            form.reset(emptyFirstTimerValues)
-          })}
+          onSubmit={(event) => event.preventDefault()}
         >
           <div className="flex-1 overflow-y-auto px-4 py-2">
             <FirstTimerFormFields form={form} />
@@ -71,9 +68,15 @@ export function FirstTimerFormSheet({
               Cancel
             </Button>
             <Button
-              type="submit"
+              type="button"
               isLoading={isSubmitting}
               isLoadingText="Submitting..."
+              onClick={() =>
+                void form.handleSubmit(async (values) => {
+                  await onSubmit(values)
+                  form.reset(emptyFirstTimerValues)
+                })()
+              }
             >
               Submit
             </Button>

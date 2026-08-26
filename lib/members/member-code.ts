@@ -1,11 +1,11 @@
-import type { Prisma } from "@prisma/client"
+import type { DbClient } from "@/lib/db/prisma"
 
 function memberCodePrefix(slug: string) {
   return slug.slice(0, 3).toUpperCase()
 }
 
 export async function allocateMemberCode(
-  tx: Prisma.TransactionClient,
+  tx: DbClient,
   branchId: string
 ) {
   const branch = await tx.branch.update({

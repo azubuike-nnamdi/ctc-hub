@@ -2,6 +2,11 @@ import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 
 import { sendMail } from "@/lib/mail/mailtrap"
+import {
+  CHURCH_MISSION,
+  CHURCH_NAME,
+  CHURCH_VISION,
+} from "@/lib/church/identity"
 
 const LOGO_CID = "ctc-logo"
 const LOGO_PATH = join(process.cwd(), "public/img/ctc-logo.png")
@@ -53,11 +58,83 @@ export async function sendMemberWelcomeEmail(input: {
   await sendWelcomeEmail({
     ...input,
     roleLabel: "Member",
-    heading: "Welcome to CTC Hub",
+    heading: "Your CTC Hub login",
     intro:
       "Your member account is ready. Use the temporary password below, then reset it on first sign-in.",
     textIntro: "Your CTC Hub member account is ready.",
-    subject: "Welcome to CTC Hub",
+    subject: "Your CTC Hub member login",
+  })
+}
+
+export async function sendFamilyWelcomeEmail(input: {
+  to: string
+  firstName: string
+}) {
+  const name = escapeHtml(input.firstName)
+  const vision = escapeHtml(CHURCH_VISION)
+  const mission = escapeHtml(CHURCH_MISSION)
+
+  const text = `Hello ${input.firstName},
+
+Welcome to the ${CHURCH_NAME} family. We are glad you completed MIP and now walk with us as a member.
+
+Our vision
+${CHURCH_VISION}
+
+Our mission
+${CHURCH_MISSION}
+
+You will receive a separate email with your CTC Hub login details if we have an email address on file.
+
+${CHURCH_NAME}`
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Welcome to ${CHURCH_NAME}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f7fb;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f7fb;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5eef5;">
+          <tr>
+            <td align="center" style="padding:28px 32px 20px;background:#000000;">
+              <img src="cid:${LOGO_CID}" alt="${escapeHtml(CHURCH_NAME)}" width="140" height="140" style="display:block;border:0;outline:none;text-decoration:none;" />
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#1A90C6;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+              <h1 style="margin:0;font-size:24px;line-height:1.3;">Welcome to the family</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;">
+              <p style="margin:0 0 16px;font-size:16px;">Hello ${name},</p>
+              <p style="margin:0 0 20px;font-size:15px;line-height:24px;">
+                Welcome to the ${escapeHtml(CHURCH_NAME)} family. Completing MIP means you now walk with us as a member. We are glad you are here.
+              </p>
+              <p style="margin:0 0 8px;font-size:13px;color:#5b6b7a;text-transform:uppercase;letter-spacing:0.04em;">Vision</p>
+              <p style="margin:0 0 20px;font-size:15px;line-height:24px;">${vision}</p>
+              <p style="margin:0 0 8px;font-size:13px;color:#5b6b7a;text-transform:uppercase;letter-spacing:0.04em;">Mission</p>
+              <p style="margin:0 0 8px;font-size:15px;line-height:24px;">${mission}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  await sendMail({
+    to: input.to,
+    subject: `Welcome to the ${CHURCH_NAME} family`,
+    text,
+    html,
+    attachments: [await logoAttachment()],
   })
 }
 

@@ -3,7 +3,10 @@ import { canWriteJourney } from "@/lib/auth/rbac"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
 import { memberDetailInclude, serializeMember } from "@/lib/members/serialize"
-import { setSoulTrackerStage } from "@/lib/soul-tracker/update-stage"
+import {
+  assertManualStageAllowed,
+  setSoulTrackerStage,
+} from "@/lib/soul-tracker/update-stage"
 import { memberJourneyUpdateSchema } from "@/lib/validation/schemas"
 
 type Params = { params: Promise<{ id: string }> }
@@ -30,6 +33,7 @@ export async function PATCH(request: Request, { params }: Params) {
     const { currentStage } = memberJourneyUpdateSchema.parse(
       await request.json()
     )
+    assertManualStageAllowed(currentStage)
 
     await prisma.$transaction(async (tx) => {
       if (!member.soulTracker) {

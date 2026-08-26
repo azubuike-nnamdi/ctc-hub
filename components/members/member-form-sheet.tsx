@@ -54,10 +54,7 @@ export function MemberFormSheet({
         </SheetHeader>
         <form
           className="flex min-h-0 flex-1 flex-col"
-          onSubmit={form.handleSubmit(async (values) => {
-            await onSubmit(values)
-            onOpenChange(false)
-          })}
+          onSubmit={(event) => event.preventDefault()}
         >
           <div className="grid flex-1 content-start gap-3 overflow-y-auto px-4">
             <MemberFormFields form={form} />
@@ -71,9 +68,15 @@ export function MemberFormSheet({
               Cancel
             </Button>
             <Button
-              type="submit"
+              type="button"
               isLoading={form.formState.isSubmitting}
               isLoadingText="Saving..."
+              onClick={() =>
+                void form.handleSubmit(async (values) => {
+                  await onSubmit(values)
+                  onOpenChange(false)
+                })()
+              }
             >
               {title.toLowerCase().includes("invite") ? "Send invite" : "Save"}
             </Button>

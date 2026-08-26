@@ -1,3 +1,4 @@
+import { serializeFollowUpActivity } from "@/lib/follow-up/log-activity"
 import { SOUL_STAGE, type SoulStage } from "@/lib/db/enums"
 import type { Member } from "@/lib/db/types"
 
@@ -12,6 +13,19 @@ export const memberListInclude = {
 export const memberDetailInclude = {
   ...memberListInclude,
   deletedBy: { select: { firstName: true, lastName: true } },
+  soulTracker: {
+    select: {
+      id: true,
+      currentStage: true,
+      activities: {
+        include: {
+          createdBy: { select: { firstName: true, lastName: true } },
+        },
+        orderBy: { contactedAt: "desc" as const },
+        take: 50,
+      },
+    },
+  },
 }
 
 type MemberDepartmentRow = { department: { id: string; name: string } }
@@ -39,7 +53,19 @@ type MemberInput = {
   updatedAt: Date
   deletedBy?: { firstName: string; lastName: string } | null
   departments?: unknown
-  soulTracker?: { id: string; currentStage: unknown } | null
+  soulTracker?: {
+    id: string
+    currentStage: unknown
+    activities?: Array<{
+      id: string
+      type: string
+      note: string
+      createdAt: Date | string
+      contactedAt?: Date | string
+      wouldWorshipAgain?: boolean | null
+      createdBy: { firstName: string; lastName: string }
+    }>
+  } | null
 }
 
 function departmentRows(value: unknown): MemberDepartmentRow[] {
@@ -92,6 +118,9 @@ export function serializeMember(member: MemberInput): Member {
       ? {
           id: member.soulTracker.id,
           currentStage: member.soulTracker.currentStage as SoulStage,
+          activities: member.soulTracker.activities?.map((activity) =>
+            serializeFollowUpActivity(activity)
+          ),
         }
       : null,
   }

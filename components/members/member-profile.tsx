@@ -10,6 +10,7 @@ import { canWriteJourney, can, type Role } from "@/lib/auth/rbac"
 import { MemberFormSheet } from "@/components/members/member-form-sheet"
 import { MemberDepartmentsCard } from "@/components/members/member-departments-card"
 import { MemberJourneyCard } from "@/components/members/member-journey-card"
+import { FollowUpActivityList } from "@/components/follow-up/follow-up-activity-list"
 import { useBreadcrumbLabel } from "@/components/layout/breadcrumb-label-provider"
 import { PageHeader } from "@/components/shared/page-header"
 import { QuerySection } from "@/components/shared/query-section"
@@ -304,6 +305,20 @@ export function MemberProfile({ id, role }: { id: string; role: Role }) {
             soulTracker={member.soulTracker ?? null}
             canEdit={canEditJourney && !member.isDeleted}
           />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Activity</CardTitle>
+              <CardDescription>
+                Follow-up notes and when they moved from first timer to member.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FollowUpActivityList
+                activities={member.soulTracker?.activities ?? []}
+              />
+            </CardContent>
+          </Card>
 
           <MemberDepartmentsCard
             memberId={member.id}

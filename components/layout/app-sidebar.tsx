@@ -2,6 +2,7 @@
 
 import {
   CalendarDaysIcon,
+  GraduationCapIcon,
   HeartHandshakeIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -70,6 +71,12 @@ const adminNavItems: {
     action: "events:read",
   },
   {
+    href: "/admin/classes",
+    label: "Classes",
+    icon: GraduationCapIcon,
+    action: "soul-tracker:read",
+  },
+  {
     href: "/admin/settings",
     label: "Settings",
     icon: SettingsIcon,
@@ -84,6 +91,11 @@ const memberNavItems: {
   followUpOnly?: boolean
 }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
+  {
+    href: "/dashboard/classes",
+    label: "Classes",
+    icon: GraduationCapIcon,
+  },
   {
     href: "/dashboard/log-soul",
     label: "Log Soul",

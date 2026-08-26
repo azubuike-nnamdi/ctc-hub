@@ -93,7 +93,7 @@ export async function inviteMember({
     if (firstTimer) {
       await tx.firstTimer.update({
         where: { id: firstTimer.id },
-        data: { status: "TREASURE_HUNT" },
+        data: { status: "MEMBER" },
       })
     }
 

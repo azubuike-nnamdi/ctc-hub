@@ -8,9 +8,10 @@ import { assertAssignedUserInBranch } from "@/lib/auth/branch-refs"
 import { assertFollowUpAssignee } from "@/lib/departments/follow-up"
 import { requireBranchContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
+import { dueDateFrom, syncFollowUpAssignment } from "@/lib/follow-up/due"
 import { setSoulTrackerStage } from "@/lib/soul-tracker/update-stage"
 import {
-  sendMemberWelcome,
+  sendMembershipEmails,
   promoteFirstTimerIfEligible,
 } from "@/lib/members/from-first-timer"
 import { soulTrackerUpdateSchema } from "@/lib/validation/schemas"
@@ -70,11 +71,18 @@ export async function PATCH(request: Request, { params }: Params) {
         data.currentStage && data.currentStage !== existing.currentStage
           ? (await setSoulTrackerStage(tx, id, data.currentStage)).promotion
           : await promoteFirstTimerIfEligible(tx, id, existing.currentStage)
+      if (assignedToId !== existing.assignedToId) {
+        await syncFollowUpAssignment(
+          tx,
+          id,
+          assignedToId,
+          dueDateFrom(existing)
+        )
+      }
       const updated = await tx.soulTracker.update({
         where: { id },
         data: {
           notes: data.notes === undefined ? existing.notes : data.notes,
-          assignedToId,
         },
         include: {
           member: {
@@ -95,7 +103,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
     if (promotion?.welcome) {
       try {
-        await sendMemberWelcome(promotion.welcome)
+        await sendMembershipEmails(promotion.welcome)
       } catch (error) {
         console.error(error)
       }

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
 import Link from "next/link"
-import { HeartHandshakeIcon, PhoneCallIcon, SettingsIcon } from "lucide-react"
+import { HeartHandshakeIcon, GraduationCapIcon, PhoneCallIcon, SettingsIcon } from "lucide-react"
 
 import { MyDepartmentsCard } from "@/components/member/my-departments-card"
 import { MyJourneyCard } from "@/components/member/my-journey-card"
@@ -60,6 +60,11 @@ export function MemberDashboard({ firstName }: { firstName: string }) {
           href="/dashboard/log-soul"
           label="Log a soul"
           icon={HeartHandshakeIcon}
+        />
+        <QuickAction
+          href="/dashboard/classes"
+          label="Classes"
+          icon={GraduationCapIcon}
         />
         <QuickAction
           href="/dashboard/settings"
