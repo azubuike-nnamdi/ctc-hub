@@ -14,7 +14,7 @@ export type MemberStatus = "ACTIVE" | "INACTIVE"
 export type Gender = "MALE" | "FEMALE"
 
 export type FirstTimerStatus =
-  "NEW" | "CONTACTED" | "VISITED" | "RETURNED" | "TREASURE_HUNT"
+  "NEW" | "CONTACTED" | "VISITED" | "RETURNED" | "MEMBER"
 
 export type AgeRange = "BELOW_20" | "RANGE_20_29" | "RANGE_30_39" | "ABOVE_40"
 
@@ -49,7 +49,7 @@ export type SoulStage =
 
 export type EventStatus = "DRAFT" | "SCHEDULED" | "CANCELLED" | "COMPLETED"
 
-export type FollowUpType = "CALL" | "VISIT" | "NOTE"
+export type FollowUpType = "CALL" | "VISIT" | "NOTE" | "MEMBERSHIP"
 
 export type FirstTimerCreatedBy = "SELF" | "STAFF"
 
@@ -57,6 +57,20 @@ export type SoulWinEventType = "PERSONAL" | "GROWTHNET" | "WINSOME"
 
 export type SupportTopic =
   "ACCOUNT_DELETED" | "SIGN_IN" | "PASSWORD" | "PROFILE" | "OTHER"
+
+export type DiscipleshipProgram = "MIP" | "SOD"
+
+export type DiscipleshipClassStatus =
+  | "DRAFT"
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED"
+
+export type DiscipleshipEnrollmentStatus =
+  | "REGISTERED"
+  | "COMPLETED"
+  | "DROPPED"
 
 export const FIRST_TIMER_CREATED_BY = {
   SELF: "SELF",
