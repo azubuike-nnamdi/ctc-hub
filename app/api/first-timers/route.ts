@@ -1,9 +1,14 @@
 import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
 import { requireBranchContext } from "@/lib/auth/session"
-import { FIRST_TIMER_CREATED_BY } from "@/lib/db/enums"
+import { FIRST_TIMER_CREATED_BY, type FirstTimerStatus } from "@/lib/db/enums"
 import { prisma } from "@/lib/db/prisma"
 import { createFirstTimerRecord } from "@/lib/first-timers/create"
-import { firstTimerSchema, paginationSchema } from "@/lib/validation/schemas"
+import { dueFromTracker, firstTimerDueOrderBy, firstTimerDueWhere, toFirstTimerWhere } from "@/lib/follow-up/due"
+import {
+  firstTimerSchema,
+  followUpDueFilterSchema,
+  paginationSchema,
+} from "@/lib/validation/schemas"
 
 export async function GET(request: Request) {
   try {
@@ -14,16 +19,16 @@ export async function GET(request: Request) {
       page: searchParams.get("page") ?? undefined,
       pageSize: searchParams.get("pageSize") ?? undefined,
     })
-    const status = searchParams.get("status")
+    const dueParam = searchParams.get("due")
+    const due = dueParam
+      ? followUpDueFilterSchema.parse(dueParam)
+      : undefined
+    const status = searchParams.get("status") as FirstTimerStatus | null
 
-    const where = {
+    const where = toFirstTimerWhere({
       branchId,
-      ...(status
-        ? {
-            status: status as
-              "NEW" | "CONTACTED" | "VISITED" | "RETURNED" | "TREASURE_HUNT",
-          }
-        : {}),
+      ...(status ? { status } : {}),
+      ...firstTimerDueWhere(due),
       ...(parsed.q
         ? {
             OR: [
@@ -37,7 +42,7 @@ export async function GET(request: Request) {
             ],
           }
         : {}),
-    }
+    })
 
     const [items, total] = await Promise.all([
       prisma.firstTimer.findMany({
@@ -50,8 +55,9 @@ export async function GET(request: Request) {
             select: { id: true, firstName: true, lastName: true },
           },
           event: { select: { id: true, title: true } },
+          soulTracker: true,
         },
-        orderBy: { registeredAt: "desc" },
+        orderBy: firstTimerDueOrderBy(),
         skip: (parsed.page - 1) * parsed.pageSize,
         take: parsed.pageSize,
       }),
@@ -59,7 +65,10 @@ export async function GET(request: Request) {
     ])
 
     return jsonOk({
-      items,
+      items: items.map((item) => ({
+        ...item,
+        nextContactAt: dueFromTracker(item.soulTracker),
+      })),
       total,
       page: parsed.page,
       pageSize: parsed.pageSize,

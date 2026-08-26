@@ -38,6 +38,7 @@ export function FirstTimersView({
   const queryClient = useQueryClient()
   const [q, setQ] = useState("")
   const [status, setStatus] = useState("ALL")
+  const [due, setDue] = useState("ALL")
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
@@ -47,8 +48,9 @@ export function FirstTimersView({
     const search = new URLSearchParams({ page: String(page), pageSize: "10" })
     if (q) search.set("q", q)
     if (status !== "ALL") search.set("status", status)
+    if (due !== "ALL") search.set("due", due)
     return search.toString()
-  }, [q, status, page])
+  }, [q, status, due, page])
 
   const statsQuery = useQuery({
     queryKey: ["first-timers", "stats"],
@@ -82,7 +84,7 @@ export function FirstTimersView({
     <div>
       <PageHeader
         title="First Timers"
-        description="Register visitors and track follow-up through Treasure Hunt."
+        description="Register visitors and assign follow-up before the next contact is due."
         extra={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setQrOpen(true)}>
@@ -119,9 +121,10 @@ export function FirstTimersView({
             statsQuery.data ?? {
               total: 0,
               new: 0,
-              inFollowUp: 0,
-              treasureHunt: 0,
+              overdue: 0,
+              unassigned: 0,
               thisMonth: 0,
+              becameMembers: 0,
             }
           }
         />
@@ -129,6 +132,7 @@ export function FirstTimersView({
       <FirstTimerFilters
         query={q}
         status={status}
+        due={due}
         onQueryChange={(value) => {
           setPage(1)
           setQ(value)
@@ -136,6 +140,10 @@ export function FirstTimersView({
         onStatusChange={(value) => {
           setPage(1)
           setStatus(value)
+        }}
+        onDueChange={(value) => {
+          setPage(1)
+          setDue(value)
         }}
       />
       <QuerySection
@@ -145,7 +153,7 @@ export function FirstTimersView({
         error={query.error}
         onRetry={() => query.refetch()}
         hasData={Boolean(query.data)}
-        skeleton={<TableSkeleton columns={8} />}
+        skeleton={<TableSkeleton columns={9} />}
       >
         <FirstTimerTable
           items={query.data?.items ?? []}

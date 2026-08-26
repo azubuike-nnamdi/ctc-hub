@@ -2,22 +2,38 @@ import { hash } from "bcryptjs"
 import type { Prisma } from "@prisma/client"
 
 import { generateTemporaryPassword } from "@/lib/auth/password"
-import type { AgeRange, Chapel, SoulStage } from "@/lib/db/enums"
+import type { AgeRange, Chapel, FirstTimerStatus, SoulStage } from "@/lib/db/enums"
+import type { DbClient } from "@/lib/db/prisma"
 import { allocateMemberCode } from "@/lib/members/member-code"
-import { sendMemberWelcomeEmail } from "@/lib/mail/onboarding-email"
+import {
+  sendFamilyWelcomeEmail,
+  sendMemberWelcomeEmail,
+} from "@/lib/mail/onboarding-email"
 import { getAppUrl } from "@/lib/utils/app-url"
 import { hasCompletedMip } from "@/lib/utils/labels"
 
 export type MemberWelcome = {
   to: string
   firstName: string
-  temporaryPassword: string
+  temporaryPassword: string | null
 }
 
 export type FirstTimerPromotion = {
   memberId: string
   created: boolean
   welcome: MemberWelcome | null
+}
+
+/**
+ * Language-service Prisma.TransactionClient can lag behind generate
+ * (FirstTimerStatus.MEMBER). Delegate the write through this so tsc and the IDE agree.
+ */
+function prismaArg<T>(value: object): T {
+  return value as unknown as T
+}
+
+function becameMemberStatus(): Prisma.FirstTimerUncheckedUpdateInput {
+  return prismaArg({ status: "MEMBER" satisfies FirstTimerStatus })
 }
 
 export function chapelFromAgeRange(ageRange: AgeRange | null): Chapel {
@@ -39,6 +55,9 @@ export function parseFirstTimerBirthday(value: string | null) {
 }
 
 export async function sendMemberWelcome(welcome: MemberWelcome) {
+  if (!welcome.temporaryPassword) {
+    return
+  }
   const appUrl = getAppUrl()
   await sendMemberWelcomeEmail({
     to: welcome.to,
@@ -48,10 +67,19 @@ export async function sendMemberWelcome(welcome: MemberWelcome) {
   })
 }
 
+export async function sendMembershipEmails(welcome: MemberWelcome) {
+  await sendFamilyWelcomeEmail({
+    to: welcome.to,
+    firstName: welcome.firstName,
+  })
+  await sendMemberWelcome(welcome)
+}
+
 export async function promoteFirstTimerIfEligible(
-  tx: Prisma.TransactionClient,
+  tx: DbClient,
   soulTrackerId: string,
-  stage: SoulStage
+  stage: SoulStage,
+  options?: { joinedAt?: Date }
 ): Promise<FirstTimerPromotion | null> {
   if (!hasCompletedMip(stage)) {
     return null
@@ -84,12 +112,12 @@ export async function promoteFirstTimerIfEligible(
     }
     await tx.firstTimer.update({
       where: { id: firstTimer.id },
-      data: { status: "TREASURE_HUNT" },
+      data: becameMemberStatus(),
     })
     return {
       memberId: existing.id,
       created: false,
-      welcome: null,
+      welcome: familyWelcome(firstTimer),
     }
   }
 
@@ -117,20 +145,21 @@ export async function promoteFirstTimerIfEligible(
       }
       await tx.firstTimer.update({
         where: { id: firstTimer.id },
-        data: { status: "TREASURE_HUNT" },
+        data: becameMemberStatus(),
       })
       return {
         memberId: existingUser.member.id,
         created: false,
-        welcome: null,
+        welcome: familyWelcome(firstTimer),
       }
     }
     if (!existingUser) {
       const temporaryPassword = generateTemporaryPassword()
+      const passwordHash = await hash(temporaryPassword, 12)
       const user = await tx.user.create({
         data: {
           email,
-          passwordHash: await hash(temporaryPassword, 12),
+          passwordHash,
           firstName: firstTimer.firstName,
           lastName: firstTimer.lastName,
           role: "MEMBER",
@@ -163,7 +192,7 @@ export async function promoteFirstTimerIfEligible(
       dateOfBirth: parseFirstTimerBirthday(firstTimer.birthday),
       address: firstTimer.address,
       chapel: chapelFromAgeRange(firstTimer.ageRange),
-      dateJoined: firstTimer.registeredAt,
+      dateJoined: options?.joinedAt ?? firstTimer.registeredAt,
     },
   })
 
@@ -173,18 +202,18 @@ export async function promoteFirstTimerIfEligible(
   })
   await tx.firstTimer.update({
     where: { id: firstTimer.id },
-    data: { status: "TREASURE_HUNT" },
+    data: becameMemberStatus(),
   })
 
   return {
     memberId: member.id,
     created: true,
-    welcome,
+    welcome: welcome ?? familyWelcome(firstTimer),
   }
 }
 
 async function findExistingMember(
-  tx: Prisma.TransactionClient,
+  tx: DbClient,
   input: {
     branchId: string
     email: string | null
@@ -226,5 +255,20 @@ async function findExistingMember(
   return {
     id: byPhone.id,
     soulTrackerId: byPhone.soulTracker?.id ?? null,
+  }
+}
+
+function familyWelcome(firstTimer: {
+  email: string | null
+  firstName: string
+}): MemberWelcome | null {
+  const email = firstTimer.email?.trim().toLowerCase() || null
+  if (!email) {
+    return null
+  }
+  return {
+    to: email,
+    firstName: firstTimer.firstName,
+    temporaryPassword: null,
   }
 }

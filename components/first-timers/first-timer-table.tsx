@@ -2,6 +2,7 @@ import { format } from "date-fns"
 import { UserPlusIcon } from "lucide-react"
 
 import type { FirstTimerListItem } from "@/components/first-timers/types"
+import { FollowUpDueBadge } from "@/components/follow-up/follow-up-due-badge"
 import { EmptyState } from "@/components/shared/empty-state"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
@@ -44,6 +45,7 @@ export function FirstTimerTable({
             <TableHead>Date visited</TableHead>
             <TableHead>Registered by</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Due</TableHead>
             <TableHead>Assigned to</TableHead>
             <TableHead />
           </TableRow>
@@ -72,6 +74,9 @@ export function FirstTimerTable({
               </TableCell>
               <TableCell>
                 <StatusBadge value={item.status} />
+              </TableCell>
+              <TableCell>
+                <FollowUpDueBadge nextContactAt={item.nextContactAt} />
               </TableCell>
               <TableCell>
                 {item.assignedTo

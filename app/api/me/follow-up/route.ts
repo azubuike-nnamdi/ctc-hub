@@ -1,6 +1,12 @@
 import { handleRouteError, jsonOk } from "@/lib/api/errors"
 import { requireFollowUpMemberContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
+import {
+  dueFromTracker,
+  firstTimerDueOrderBy,
+  notConvertedFirstTimerWhere,
+  soulTrackerDueOrderBy,
+} from "@/lib/follow-up/due"
 import { serializeFollowUpActivity } from "@/lib/follow-up/log-activity"
 
 const activityInclude = {
@@ -13,15 +19,20 @@ export async function GET() {
 
     const [firstTimers, souls] = await Promise.all([
       prisma.firstTimer.findMany({
-        where: { assignedToId: user.id, branchId },
+        where: {
+          assignedToId: user.id,
+          branchId,
+          ...notConvertedFirstTimerWhere(),
+        },
         include: {
+          soulTracker: true,
           activities: {
             include: activityInclude,
             orderBy: { createdAt: "desc" },
             take: 3,
           },
         },
-        orderBy: { registeredAt: "desc" },
+        orderBy: firstTimerDueOrderBy(),
       }),
       prisma.soulTracker.findMany({
         where: {
@@ -47,7 +58,7 @@ export async function GET() {
             take: 3,
           },
         },
-        orderBy: { updatedAt: "desc" },
+        orderBy: soulTrackerDueOrderBy(),
       }),
     ])
 
@@ -61,6 +72,7 @@ export async function GET() {
         gender: item.gender,
         status: item.status,
         registeredAt: item.registeredAt.toISOString(),
+        nextContactAt: dueFromTracker(item.soulTracker),
         prayerRequest: item.prayerRequest,
         membershipInterest: item.membershipInterest,
         recentActivities: item.activities.map(serializeFollowUpActivity),
@@ -77,6 +89,7 @@ export async function GET() {
             lastName: item.member.lastName,
             phone: item.member.phone,
             currentStage: item.currentStage,
+            nextContactAt: dueFromTracker(item),
             departments: item.member.departments.map((row) => row.department),
             recentActivities: item.activities.map(serializeFollowUpActivity),
           },

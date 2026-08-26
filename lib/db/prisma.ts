@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient, type Prisma } from "@prisma/client"
 
 /**
  * Bump when the Prisma schema changes so the Next.js singleton does not keep
  * a client generated before the new fields/relations existed.
  */
-const PRISMA_CLIENT_GENERATION = 14
+const PRISMA_CLIENT_GENERATION = 19
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient
@@ -24,3 +24,5 @@ if (globalForPrisma.prismaGeneration !== PRISMA_CLIENT_GENERATION) {
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()
+
+export type DbClient = PrismaClient | Prisma.TransactionClient

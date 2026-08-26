@@ -10,6 +10,9 @@ import type {
   MembershipInterest,
   SoulStage,
   SoulWinEventType,
+  DiscipleshipProgram,
+  DiscipleshipClassStatus,
+  DiscipleshipEnrollmentStatus,
 } from "@/lib/db/enums"
 
 export type {
@@ -27,6 +30,9 @@ export type {
   SoulStage,
   SoulWinEventType,
   SupportTopic,
+  DiscipleshipProgram,
+  DiscipleshipClassStatus,
+  DiscipleshipEnrollmentStatus,
 } from "@/lib/db/enums"
 
 export type Department = {
@@ -62,7 +68,19 @@ export type Member = {
   createdAt: string
   updatedAt: string
   departments?: Array<{ id: string; name: string }>
-  soulTracker?: { id: string; currentStage: SoulStage } | null
+  soulTracker?: {
+    id: string
+    currentStage: SoulStage
+    activities?: Array<{
+      id: string
+      type: string
+      note: string
+      contactedAt?: string
+      wouldWorshipAgain?: boolean | null
+      createdAt: string
+      createdBy: { firstName: string; lastName: string }
+    }>
+  } | null
 }
 
 export type SoulWin = {
@@ -102,6 +120,7 @@ export type FirstTimer = {
   createdBy: FirstTimerCreatedBy
   createdByUserId: string | null
   status: FirstTimerStatus
+  nextContactAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -120,4 +139,33 @@ export type Event = {
   createdById: string
   createdAt: string
   updatedAt: string
+}
+
+export type DiscipleshipClass = {
+  id: string
+  branchId: string
+  program: DiscipleshipProgram
+  title: string
+  startsOn: string
+  status: DiscipleshipClassStatus
+  facilitatorName: string | null
+  createdById: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type DiscipleshipSession = {
+  id: string
+  classId: string
+  weekNumber: number
+  meetsOn: string
+}
+
+export type DiscipleshipEnrollment = {
+  id: string
+  classId: string
+  soulTrackerId: string
+  memberId: string | null
+  firstTimerId: string | null
+  status: DiscipleshipEnrollmentStatus
 }

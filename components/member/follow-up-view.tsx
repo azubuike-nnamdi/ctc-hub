@@ -7,6 +7,7 @@ import type { FirstTimerStatus, SoulStage } from "@/lib/db/enums"
 
 import { FollowUpActivityForm } from "@/components/follow-up/follow-up-activity-form"
 import { FollowUpActivityList } from "@/components/follow-up/follow-up-activity-list"
+import { FollowUpDueBadge } from "@/components/follow-up/follow-up-due-badge"
 import { EmptyState } from "@/components/shared/empty-state"
 import { PageHeader } from "@/components/shared/page-header"
 import { QuerySection } from "@/components/shared/query-section"
@@ -44,6 +45,7 @@ type AssignedFirstTimer = {
   gender: string
   status: FirstTimerStatus
   registeredAt: string
+  nextContactAt: string | null
   prayerRequest: string | null
   membershipInterest: string | null
   recentActivities: Activity[]
@@ -56,6 +58,7 @@ type AssignedMember = {
   lastName: string
   phone: string
   currentStage: SoulStage
+  nextContactAt: string | null
   departments: Array<{ id: string; name: string }>
   recentActivities: Activity[]
 }
@@ -95,7 +98,7 @@ export function MemberFollowUpView() {
     <div>
       <PageHeader
         title="Follow-up"
-        description="People assigned to you from Mission or Follow-up. Log calls, visits, and whether they would worship with us again."
+        description="People assigned to you from Mission or Follow-up, ordered by next contact."
       />
       <QuerySection
         isPending={query.isPending}
@@ -125,6 +128,7 @@ export function MemberFollowUpView() {
                   name={fullName(item.firstName, item.lastName)}
                   phone={item.phone}
                   status={item.status}
+                  nextContactAt={item.nextContactAt}
                   onOpen={() =>
                     setSelected({
                       kind: "first-timer",
@@ -142,6 +146,7 @@ export function MemberFollowUpView() {
                   name={fullName(item.firstName, item.lastName)}
                   phone={item.phone}
                   status={item.currentStage}
+                  nextContactAt={item.nextContactAt}
                   departments={item.departments}
                   onOpen={() =>
                     setSelected({
@@ -171,17 +176,21 @@ export function MemberFollowUpView() {
           {selected?.kind === "first-timer" ? (
             <FirstTimerFollowUpBody
               id={selected.id}
-              onSaved={() =>
-                queryClient.invalidateQueries({ queryKey: ["me", "follow-up"] })
-              }
+              onSaved={() => {
+                void queryClient.invalidateQueries({
+                  queryKey: ["me", "follow-up"],
+                })
+              }}
             />
           ) : null}
           {selected?.kind === "member" ? (
             <MemberFollowUpBody
               id={selected.id}
-              onSaved={() =>
-                queryClient.invalidateQueries({ queryKey: ["me", "follow-up"] })
-              }
+              onSaved={() => {
+                void queryClient.invalidateQueries({
+                  queryKey: ["me", "follow-up"],
+                })
+              }}
             />
           ) : null}
         </SheetContent>
@@ -202,6 +211,7 @@ function FirstTimerFollowUpBody({
     queryKey: ["me", "follow-up", "first-timer", id],
     queryFn: () =>
       api<FirstTimerDetail>(`/api/me/follow-up/first-timers/${id}`),
+    refetchOnMount: false,
   })
   const mutation = useMutation({
     mutationFn: (values: {
@@ -209,6 +219,8 @@ function FirstTimerFollowUpBody({
       note: string
       contactedAt: string
       wouldWorshipAgain: boolean | null
+      nextContactAt: string
+      closeFollowUp: boolean
       status?: FirstTimerStatus
     }) =>
       api(`/api/me/follow-up/first-timers/${id}/activities`, {
@@ -217,7 +229,7 @@ function FirstTimerFollowUpBody({
       }),
     onSuccess: () => {
       toast.success("Activity saved.")
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["me", "follow-up", "first-timer", id],
       })
       onSaved()
@@ -246,6 +258,7 @@ function FirstTimerFollowUpBody({
             {item.email ? ` · ${item.email}` : ""}
           </p>
           <StatusBadge value={item.status} />
+          <FollowUpDueBadge nextContactAt={item.nextContactAt} />
           {item.prayerRequest ? (
             <p className="text-muted-foreground">{item.prayerRequest}</p>
           ) : null}
@@ -276,16 +289,23 @@ function MemberFollowUpBody({
   const query = useQuery({
     queryKey: ["me", "follow-up", "soul", id],
     queryFn: () => api<MemberDetail>(`/api/me/follow-up/souls/${id}`),
+    refetchOnMount: false,
   })
   const mutation = useMutation({
-    mutationFn: (values: { type: string; note: string; contactedAt: string }) =>
+    mutationFn: (values: {
+      type: string
+      note: string
+      contactedAt: string
+      nextContactAt: string
+      closeFollowUp: boolean
+    }) =>
       api(`/api/me/follow-up/souls/${id}/activities`, {
         method: "POST",
         body: JSON.stringify(values),
       }),
     onSuccess: () => {
       toast.success("Activity saved.")
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["me", "follow-up", "soul", id],
       })
       onSaved()
@@ -311,6 +331,7 @@ function MemberFollowUpBody({
         <div className="grid gap-2 text-sm">
           <p>{item.phone}</p>
           <StatusBadge value={item.currentStage} />
+          <FollowUpDueBadge nextContactAt={item.nextContactAt} />
           {item.departments.length ? (
             <div className="flex flex-wrap gap-1.5">
               {item.departments.map((department) => (
@@ -368,12 +389,14 @@ function AssignedCard({
   name,
   phone,
   status,
+  nextContactAt,
   departments,
   onOpen,
 }: {
   name: string
   phone: string
   status: string
+  nextContactAt: string | null
   departments?: Array<{ id: string; name: string }>
   onOpen: () => void
 }) {
@@ -396,7 +419,8 @@ function AssignedCard({
           </div>
         ) : null}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+        <FollowUpDueBadge nextContactAt={nextContactAt} />
         <StatusBadge value={status} />
         <Button variant="outline" size="sm" onClick={onOpen}>
           Log activity

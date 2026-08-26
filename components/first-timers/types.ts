@@ -3,6 +3,7 @@ import type { FirstTimer } from "@/lib/db/types"
 export type FirstTimerListItem = FirstTimer & {
   assignedTo: { id?: string; firstName: string; lastName: string } | null
   createdByUser: { firstName: string; lastName: string } | null
+  nextContactAt: string | null
 }
 
 export type FirstTimerListResponse = {
@@ -13,9 +14,10 @@ export type FirstTimerListResponse = {
 export type FirstTimerStatsResponse = {
   total: number
   new: number
-  inFollowUp: number
-  treasureHunt: number
+  overdue: number
+  unassigned: number
   thisMonth: number
+  becameMembers: number
 }
 
 export type FollowUpOptionsResponse = {

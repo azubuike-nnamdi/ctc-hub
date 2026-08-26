@@ -13,6 +13,11 @@ import { requireBranchContext } from "@/lib/auth/session"
 import { assertFollowUpAssignee } from "@/lib/departments/follow-up"
 import { prisma } from "@/lib/db/prisma"
 import {
+  dueFromTracker,
+  isSystemMemberStatusChange,
+  syncFirstTimerFollowUpAssignment,
+} from "@/lib/follow-up/due"
+import {
   firstTimerSchema,
   firstTimerStatusSchema,
 } from "@/lib/validation/schemas"
@@ -43,7 +48,10 @@ export async function GET(_request: Request, { params }: Params) {
     if (!firstTimer) {
       return jsonError("First timer not found.", 404)
     }
-    return jsonOk(firstTimer)
+    return jsonOk({
+      ...firstTimer,
+      nextContactAt: dueFromTracker(firstTimer.soulTracker),
+    })
   } catch (error) {
     return handleRouteError(error)
   }
@@ -72,6 +80,12 @@ export async function PATCH(request: Request, { params }: Params) {
         return jsonError("Ushers cannot update follow-up status.", 403)
       }
       const data = firstTimerStatusSchema.parse(body)
+      if (isSystemMemberStatusChange(existing.status, data.status)) {
+        return jsonError(
+          "A first timer becomes a member when they are marked present at MIP.",
+          400
+        )
+      }
       const assignedToId =
         data.assignedToId === undefined
           ? existing.assignedToId
@@ -83,15 +97,12 @@ export async function PATCH(request: Request, { params }: Params) {
       const updated = await prisma.firstTimer.update({
         where: { id },
         data: {
-          status: data.status,
+          status: data.status as (typeof existing)["status"],
           assignedToId,
         },
       })
       if (assignedToId !== existing.assignedToId) {
-        await prisma.soulTracker.updateMany({
-          where: { firstTimerId: id },
-          data: { assignedToId },
-        })
+        await syncFirstTimerFollowUpAssignment(prisma, id, assignedToId)
       }
       return jsonOk(updated)
     }
@@ -107,12 +118,19 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     const data = firstTimerSchema.parse(body)
+    if (isSystemMemberStatusChange(existing.status, data.status)) {
+      return jsonError(
+        "A first timer becomes a member when they are marked present at MIP.",
+        400
+      )
+    }
     await assertBranchRefs({
       assignedToId: data.assignedToId,
       eventId: data.eventId,
       branchId,
     })
-    if (emptyToNull(data.assignedToId) !== existing.assignedToId) {
+    const assignedToId = emptyToNull(data.assignedToId)
+    if (assignedToId !== existing.assignedToId) {
       await assertFollowUpAssignee(data.assignedToId, branchId)
     }
     const updated = await prisma.firstTimer.update({
@@ -135,10 +153,13 @@ export async function PATCH(request: Request, { params }: Params) {
         invitedBy: emptyToNull(data.invitedBy),
         eventId: emptyToNull(data.eventId),
         prayerRequest: emptyToNull(data.prayerRequest),
-        assignedToId: emptyToNull(data.assignedToId),
-        status: data.status ?? existing.status,
+        assignedToId,
+        status: data.status as (typeof existing)["status"],
       },
     })
+    if (assignedToId !== existing.assignedToId) {
+      await syncFirstTimerFollowUpAssignment(prisma, id, assignedToId)
+    }
     return jsonOk(updated)
   } catch (error) {
     return handleRouteError(error)

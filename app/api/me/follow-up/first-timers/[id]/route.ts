@@ -1,6 +1,10 @@
 import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
 import { requireFollowUpMemberContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
+import {
+  dueFromTracker,
+  isSystemMemberStatusChange,
+} from "@/lib/follow-up/due"
 import { serializeFollowUpActivity } from "@/lib/follow-up/log-activity"
 import { firstTimerStatusSchema } from "@/lib/validation/schemas"
 
@@ -13,6 +17,7 @@ export async function GET(_request: Request, { params }: Params) {
     const firstTimer = await prisma.firstTimer.findFirst({
       where: { id, branchId, assignedToId: user.id },
       include: {
+        soulTracker: true,
         activities: {
           include: {
             createdBy: { select: { firstName: true, lastName: true } },
@@ -41,6 +46,7 @@ export async function GET(_request: Request, { params }: Params) {
       prayerRequest: firstTimer.prayerRequest,
       status: firstTimer.status,
       registeredAt: firstTimer.registeredAt.toISOString(),
+      nextContactAt: dueFromTracker(firstTimer.soulTracker),
       activities: firstTimer.activities.map(serializeFollowUpActivity),
     })
   } catch (error) {
@@ -60,9 +66,15 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     const data = firstTimerStatusSchema.parse(await request.json())
+    if (isSystemMemberStatusChange(existing.status, data.status)) {
+      return jsonError(
+        "A first timer becomes a member when they are marked present at MIP.",
+        400
+      )
+    }
     const updated = await prisma.firstTimer.update({
       where: { id },
-      data: { status: data.status },
+      data: { status: data.status as (typeof existing)["status"] },
     })
     return jsonOk({
       id: updated.id,

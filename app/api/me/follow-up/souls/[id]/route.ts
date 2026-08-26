@@ -1,6 +1,7 @@
 import { handleRouteError, jsonError, jsonOk } from "@/lib/api/errors"
 import { requireFollowUpMemberContext } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
+import { dueFromTracker } from "@/lib/follow-up/due"
 import { serializeFollowUpActivity } from "@/lib/follow-up/log-activity"
 
 type Params = { params: Promise<{ id: string }> }
@@ -44,6 +45,7 @@ export async function GET(_request: Request, { params }: Params) {
     return jsonOk({
       id: record.id,
       currentStage: record.currentStage,
+      nextContactAt: dueFromTracker(record),
       memberId: record.member.id,
       firstName: record.member.firstName,
       lastName: record.member.lastName,

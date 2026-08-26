@@ -37,7 +37,7 @@ enum FirstTimerStatus {
   CONTACTED
   VISITED
   RETURNED
-  TREASURE_HUNT
+  MEMBER
 }
 
 enum AgeRange {
@@ -93,6 +93,7 @@ enum FollowUpType {
   CALL
   VISIT
   NOTE
+  MEMBERSHIP
 }
 
 enum SoulWinEventType {
@@ -133,6 +134,7 @@ model Branch {
   soulWins             SoulWin[]
   qrCode               BranchQrCode?
   departments          Department[]
+  discipleshipClasses  DiscipleshipClass[]
 
   @@index([organizationId])
 }
@@ -179,7 +181,9 @@ model User {
   deletedMembers       Member[]           @relation("MemberDeletedBy")
   cookieConsents       CookieConsentLog[]
   refreshTokens        RefreshToken[]
-  createdQrCodes       BranchQrCode[]
+  createdQrCodes               BranchQrCode[]
+  createdDiscipleshipClasses   DiscipleshipClass[]
+  markedDiscipleshipAttendance DiscipleshipAttendance[]
 
   @@index([branchId])
 }
@@ -234,6 +238,7 @@ model Member {
   soulTracker SoulTracker?
   soulWins    SoulWin[]
   departments MemberDepartment[]
+  discipleshipEnrollments DiscipleshipEnrollment[]
 
   @@unique([branchId, memberCode])
   @@index([branchId])
@@ -301,6 +306,7 @@ model FirstTimer {
   createdByUser User?              @relation("FirstTimerCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   soulTracker   SoulTracker?
   activities    FollowUpActivity[]
+  discipleshipEnrollments DiscipleshipEnrollment[]
 
   @@index([branchId])
   @@index([branchId, status])
@@ -317,6 +323,7 @@ model SoulTracker {
   currentStage  SoulStage @default(FIRST_TIMER)
   notes         String?
   assignedToId  String?
+  nextContactAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -326,9 +333,11 @@ model SoulTracker {
   assignedTo User?              @relation("SoulAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   stages     SoulStageEvent[]
   activities FollowUpActivity[]
+  discipleshipEnrollments DiscipleshipEnrollment[]
 
   @@index([branchId])
   @@index([branchId, currentStage])
+  @@index([branchId, nextContactAt])
 }
 
 model SoulStageEvent {
@@ -443,4 +452,96 @@ model CookieConsentLog {
 
   @@index([userId])
   @@index([acceptedAt])
+}
+
+enum DiscipleshipProgram {
+  MIP
+  SOD
+}
+
+enum DiscipleshipClassStatus {
+  DRAFT
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DiscipleshipEnrollmentStatus {
+  REGISTERED
+  COMPLETED
+  DROPPED
+}
+
+model DiscipleshipClass {
+  id              String                   @id @default(cuid())
+  branchId        String
+  program         DiscipleshipProgram
+  title           String
+  startsOn        DateTime
+  status          DiscipleshipClassStatus  @default(OPEN)
+  facilitatorName String?
+  createdById     String
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  branch      Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy   User                     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  sessions    DiscipleshipSession[]
+  enrollments DiscipleshipEnrollment[]
+
+  @@index([branchId])
+  @@index([branchId, program, status])
+}
+
+model DiscipleshipSession {
+  id         String   @id @default(cuid())
+  classId    String
+  weekNumber Int
+  meetsOn    DateTime
+  createdAt  DateTime @default(now())
+
+  class       DiscipleshipClass        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  attendances DiscipleshipAttendance[]
+
+  @@unique([classId, weekNumber])
+  @@index([classId, meetsOn])
+}
+
+model DiscipleshipEnrollment {
+  id            String                       @id @default(cuid())
+  classId       String
+  soulTrackerId String
+  memberId      String?
+  firstTimerId  String?
+  status        DiscipleshipEnrollmentStatus @default(REGISTERED)
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+
+  class       DiscipleshipClass        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  soulTracker SoulTracker              @relation(fields: [soulTrackerId], references: [id], onDelete: Restrict)
+  member      Member?                  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  firstTimer  FirstTimer?              @relation(fields: [firstTimerId], references: [id], onDelete: SetNull)
+  attendances DiscipleshipAttendance[]
+
+  @@unique([classId, soulTrackerId])
+  @@index([soulTrackerId])
+  @@index([memberId])
+  @@index([firstTimerId])
+}
+
+model DiscipleshipAttendance {
+  id           String   @id @default(cuid())
+  enrollmentId String
+  sessionId    String
+  present      Boolean  @default(true)
+  markedById   String
+  markedAt     DateTime @default(now())
+
+  enrollment DiscipleshipEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  session    DiscipleshipSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  markedBy   User                   @relation(fields: [markedById], references: [id], onDelete: Restrict)
+
+  @@unique([enrollmentId, sessionId])
+  @@index([sessionId])
 }

@@ -1,5 +1,11 @@
 import { Badge } from "@/components/ui/badge"
-import { SOUL_STAGE_LABELS, SOUL_WIN_EVENT_LABELS, FOLLOW_UP_TYPE_LABELS } from "@/lib/utils/labels"
+import {
+  DISCIPLESHIP_CLASS_STATUS_LABELS,
+  DISCIPLESHIP_PROGRAM_LABELS,
+  SOUL_STAGE_LABELS,
+  SOUL_WIN_EVENT_LABELS,
+  FOLLOW_UP_TYPE_LABELS,
+} from "@/lib/utils/labels"
 
 const styles: Record<string, string> = {
   ACTIVE:
@@ -13,12 +19,17 @@ const styles: Record<string, string> = {
     "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
   RETURNED:
     "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  TREASURE_HUNT: "bg-red-50 text-[var(--brand-red)] dark:bg-red-950",
   DRAFT: "bg-muted text-muted-foreground",
   SCHEDULED: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
   CANCELLED: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
-  COMPLETED:
-    "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  IN_PROGRESS:
+    "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  OPEN: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+  MIP: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+  SOD: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  REGISTERED:
+    "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+  DROPPED: "bg-muted text-muted-foreground",
   FIRST_TIMER: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
   FOLLOW_UP: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   MIP_IN_PROGRESS:
@@ -45,6 +56,8 @@ const styles: Record<string, string> = {
   CALL: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
   VISIT: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
   NOTE: "bg-muted text-muted-foreground",
+  MEMBERSHIP:
+    "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   ADULT: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
   YOUTH: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   JUNIOR:
@@ -65,6 +78,8 @@ const styles: Record<string, string> = {
 const labels: Record<string, string> = {
   ...SOUL_STAGE_LABELS,
   ...FOLLOW_UP_TYPE_LABELS,
+  ...DISCIPLESHIP_CLASS_STATUS_LABELS,
+  ...DISCIPLESHIP_PROGRAM_LABELS,
   PENDING_RESET: "Pending reset",
   SUPER_ADMIN: "Super Admin",
   ADMIN: "Admin",

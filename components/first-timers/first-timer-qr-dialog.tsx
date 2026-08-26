@@ -35,6 +35,7 @@ export function FirstTimerQrDialog({
     queryKey: ["first-timers", "qr"],
     queryFn: () => api<QrResponse>("/api/first-timers/qr"),
     enabled: open,
+    refetchOnMount: false,
   })
 
   const generateMutation = useMutation({

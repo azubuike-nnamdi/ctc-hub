@@ -68,7 +68,7 @@ export function FollowUpAssigneeSelect({
           <Select
             value={value || "NONE"}
             onValueChange={(next) => {
-              if (!next) return
+              if (!next || next === (value || "NONE")) return
               const assignedToId = next === "NONE" ? "" : next
               const person =
                 options.find((item) => item.id === assignedToId) ?? null

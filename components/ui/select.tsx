@@ -45,6 +45,8 @@ function SelectTrigger({
         className
       )}
       {...props}
+      nativeButton
+      type="button"
     >
       {children}
       <SelectPrimitive.Icon

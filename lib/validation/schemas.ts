@@ -146,13 +146,13 @@ export const firstTimerSchema = withHearAboutOther(
     eventId: z.string().optional().or(z.literal("")),
     assignedToId: z.string().optional().or(z.literal("")),
     status: z
-      .enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "TREASURE_HUNT"])
+      .enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "MEMBER"])
       .optional(),
   })
 )
 
 export const firstTimerStatusSchema = z.object({
-  status: z.enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "TREASURE_HUNT"]),
+  status: z.enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "MEMBER"]),
   assignedToId: z.string().optional().nullable(),
 })
 
@@ -160,11 +160,17 @@ export const followUpNoteSchema = z.object({
   type: z.enum(["CALL", "VISIT", "NOTE"]).default("NOTE"),
   note: z.string().min(1, "Note is required"),
   contactedAt: z.string().optional().or(z.literal("")),
+  nextContactAt: z.string().optional().or(z.literal("")),
+  closeFollowUp: z.boolean().optional(),
   wouldWorshipAgain: z.boolean().nullable().optional(),
-  status: z
-    .enum(["NEW", "CONTACTED", "VISITED", "RETURNED", "TREASURE_HUNT"])
-    .optional(),
+  status: z.enum(["NEW", "CONTACTED", "VISITED", "RETURNED"]).optional(),
 })
+
+export const followUpDueFilterSchema = z.enum([
+  "OVERDUE",
+  "UNASSIGNED",
+  "DUE_THIS_WEEK",
+])
 
 export const soulStageSchema = z.enum([
   "FIRST_TIMER",
@@ -187,6 +193,43 @@ export const soulTrackerUpdateSchema = z.object({
 
 export const memberJourneyUpdateSchema = z.object({
   currentStage: soulStageSchema,
+})
+
+export const discipleshipProgramSchema = z.enum(["MIP", "SOD"])
+
+export const discipleshipClassCreateSchema = z.object({
+  program: discipleshipProgramSchema,
+  title: z.string().trim().max(80).optional().or(z.literal("")),
+  firstSunday: z.string().min(1, "Pick the first Sunday"),
+  facilitatorName: z.string().trim().max(80).optional().or(z.literal("")),
+})
+
+export const discipleshipClassUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(80).optional(),
+  facilitatorName: z.string().trim().max(80).optional().nullable(),
+  status: z
+    .enum(["DRAFT", "OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"])
+    .optional(),
+})
+
+export const discipleshipEnrollmentSchema = z.object({
+  soulTrackerId: z.string().min(1, "Select a person"),
+})
+
+export const discipleshipAttendanceSchema = z.object({
+  enrollmentId: z.string().min(1),
+  present: z.boolean(),
+})
+
+export const discipleshipAttendanceBatchSchema = z.union([
+  discipleshipAttendanceSchema,
+  z.object({
+    entries: z.array(discipleshipAttendanceSchema).min(1),
+  }),
+])
+
+export const memberClassRegisterSchema = z.object({
+  classId: z.string().min(1, "Select a class"),
 })
 
 export const departmentSchema = z.object({

@@ -1,6 +1,8 @@
 import type {
   AgeRange,
   Chapel,
+  DiscipleshipClassStatus,
+  DiscipleshipProgram,
   FirstTimerCreatedBy,
   FirstTimerStatus,
   FollowUpType,
@@ -83,6 +85,46 @@ export function hasCompletedSod(stage: SoulStage | null | undefined) {
   return SOUL_STAGES.indexOf(stage) >= SOUL_STAGES.indexOf("SOD_COMPLETED")
 }
 
+export const MANUAL_SOUL_STAGES = SOUL_STAGES.filter(
+  (stage) => stage !== "MIP_COMPLETED" && stage !== "SOD_COMPLETED"
+)
+
+export function journeyStageOptions(current: SoulStage) {
+  if ((MANUAL_SOUL_STAGES as SoulStage[]).includes(current)) {
+    return MANUAL_SOUL_STAGES
+  }
+  return [current, ...MANUAL_SOUL_STAGES]
+}
+
+export const DISCIPLESHIP_PROGRAMS: DiscipleshipProgram[] = ["MIP", "SOD"]
+
+export const DISCIPLESHIP_PROGRAM_LABELS: Record<DiscipleshipProgram, string> = {
+  MIP: "MIP",
+  SOD: "SOD",
+}
+
+export const DISCIPLESHIP_CLASS_STATUSES: DiscipleshipClassStatus[] = [
+  "DRAFT",
+  "OPEN",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+]
+
+export const DISCIPLESHIP_CLASS_STATUS_LABELS: Record<
+  DiscipleshipClassStatus,
+  string
+> = {
+  DRAFT: "Draft",
+  OPEN: "Open",
+  IN_PROGRESS: "In progress",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+}
+
+export const CLASS_COMPLETED_STAGE_HINT =
+  "MIP completes when they are marked present on that Sunday. SOD completes when the class is finished, not from this dropdown."
+
 export const DEPARTMENT_SOD_MESSAGE =
   "A member can join a department after they complete SOD."
 
@@ -113,12 +155,16 @@ export const CHAPEL_LABELS: Record<Chapel, string> = {
   JUNIOR: "Junior",
 }
 
-export const FIRST_TIMER_STATUSES: FirstTimerStatus[] = [
+export const OPEN_FIRST_TIMER_STATUSES: FirstTimerStatus[] = [
   "NEW",
   "CONTACTED",
   "VISITED",
   "RETURNED",
-  "TREASURE_HUNT",
+]
+
+export const FIRST_TIMER_STATUSES: FirstTimerStatus[] = [
+  ...OPEN_FIRST_TIMER_STATUSES,
+  "MEMBER",
 ]
 
 export const FIRST_TIMER_STATUS_LABELS: Record<FirstTimerStatus, string> = {
@@ -126,7 +172,7 @@ export const FIRST_TIMER_STATUS_LABELS: Record<FirstTimerStatus, string> = {
   CONTACTED: "Contacted",
   VISITED: "Visited",
   RETURNED: "Returned",
-  TREASURE_HUNT: "Treasure Hunt",
+  MEMBER: "Member",
 }
 
 export const GENDERS: Gender[] = ["MALE", "FEMALE"]
@@ -208,6 +254,7 @@ export const FOLLOW_UP_TYPE_LABELS: Record<FollowUpType, string> = {
   CALL: "Call",
   VISIT: "Visit",
   NOTE: "Note",
+  MEMBERSHIP: "Became a member",
 }
 
 export const FOLLOW_UP_ASSIGNEE_HINT =

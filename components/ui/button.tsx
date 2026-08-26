@@ -51,12 +51,14 @@ function Button({
   children,
   render,
   nativeButton,
+  type,
   ...props
 }: ButtonPrimitive.Props &
   VariantProps<typeof buttonVariants> & {
     isLoading?: boolean
     isLoadingText?: ReactNode
   }) {
+  const isNativeButton = nativeButton ?? !render
   return (
     <ButtonPrimitive
       data-slot="button"
@@ -64,7 +66,8 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       disabled={isLoading || disabled}
       aria-busy={isLoading || undefined}
-      nativeButton={nativeButton ?? !render}
+      nativeButton={isNativeButton}
+      type={type ?? (isNativeButton ? "button" : undefined)}
       render={render}
       {...props}
     >

@@ -1,6 +1,7 @@
 import { emptyToNull } from "@/lib/api/errors"
 import { assertBranchRefs } from "@/lib/auth/branch-refs"
 import { assertFollowUpAssignee } from "@/lib/departments/follow-up"
+import { firstContactDueFields } from "@/lib/follow-up/due"
 import {
   FIRST_TIMER_CREATED_BY,
   SOUL_STAGE,
@@ -72,6 +73,7 @@ export async function createFirstTimerRecord({
         firstTimerId: created.id,
         currentStage: SOUL_STAGE.FIRST_TIMER,
         assignedToId: created.assignedToId,
+        ...firstContactDueFields(),
         stages: {
           create: {
             stage: SOUL_STAGE.FIRST_TIMER,
