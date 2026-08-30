@@ -33,6 +33,7 @@ Fill `.env` (never commit this file):
 | `DATABASE_URL` | Postgres connection string |
 | `AUTH_SECRET` | Auth.js signing secret (`openssl rand -base64 32`) |
 | `AUTH_TRUST_HOST` | Keep `true` for local Auth.js |
+| `TRUST_PROXY` | Set `true` only when a trusted proxy sanitizes client IP headers |
 | `NEXT_PUBLIC_APP_URL` | App URL, usually `http://localhost:3000` |
 | `SEED_ADMIN_EMAIL` | Super admin email used by the seed |
 | `SEED_ADMIN_PASSWORD` | Super admin password (at least 8 characters) |
@@ -59,6 +60,12 @@ openssl rand -base64 32
 ```
 
 Paste that value into `AUTH_SECRET`. Restart `pnpm dev` after any env change.
+
+Login attempts are limited to 3 attempts per email and 3 attempts per client IP
+within one minute. In production, set `TRUST_PROXY=true` only when the app is
+behind a trusted reverse proxy that overwrites `x-forwarded-for` and
+`x-real-ip`; otherwise the IP limiter intentionally uses a shared fallback
+instead of trusting spoofable headers.
 
 ### Mailtrap (staff onboarding)
 
