@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client"
+
 import { prisma } from "@/lib/db/prisma"
 
 export class RateLimitError extends Error {
@@ -8,6 +10,12 @@ export class RateLimitError extends Error {
 }
 
 export function clientIp(request: Request) {
+  const trustProxy =
+    process.env.TRUST_PROXY === "true" || process.env.NODE_ENV !== "production"
+  if (!trustProxy) {
+    return "unknown"
+  }
+
   const forwarded = request.headers.get("x-forwarded-for")
   const first = forwarded?.split(",")[0]?.trim()
   if (first) {
@@ -23,32 +31,28 @@ export async function consumeRateLimit(
   windowMs: number
 ) {
   const now = new Date()
-  const existing = await prisma.rateLimit.findUnique({ where: { key } })
+  const resetAt = new Date(now.getTime() + windowMs)
+  const [result] = await prisma.$queryRaw<Array<{ count: number }>>(
+    Prisma.sql`
+      INSERT INTO "RateLimit" ("key", "count", "resetAt")
+      VALUES (${key}, 1, ${resetAt})
+      ON CONFLICT ("key") DO UPDATE
+      SET
+        "count" = CASE
+          WHEN "RateLimit"."resetAt" <= ${now} THEN 1
+          ELSE "RateLimit"."count" + 1
+        END,
+        "resetAt" = CASE
+          WHEN "RateLimit"."resetAt" <= ${now} THEN ${resetAt}
+          ELSE "RateLimit"."resetAt"
+        END
+      RETURNING "count"
+    `
+  )
 
-  if (!existing || existing.resetAt <= now) {
-    await prisma.rateLimit.upsert({
-      where: { key },
-      create: {
-        key,
-        count: 1,
-        resetAt: new Date(now.getTime() + windowMs),
-      },
-      update: {
-        count: 1,
-        resetAt: new Date(now.getTime() + windowMs),
-      },
-    })
-    return
-  }
-
-  if (existing.count >= max) {
+  if (!result || result.count > max) {
     throw new RateLimitError()
   }
-
-  await prisma.rateLimit.update({
-    where: { key },
-    data: { count: { increment: 1 } },
-  })
 }
 
 export async function clearRateLimit(key: string) {
