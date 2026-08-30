@@ -33,10 +33,11 @@ Fill `.env` (never commit this file):
 | `DATABASE_URL` | Postgres connection string |
 | `AUTH_SECRET` | Auth.js signing secret (`openssl rand -base64 32`) |
 | `AUTH_TRUST_HOST` | Keep `true` for local Auth.js |
+| `TRUST_PROXY` | Set `true` only when a trusted proxy sanitizes client IP headers |
 | `NEXT_PUBLIC_APP_URL` | App URL, usually `http://localhost:3000` |
 | `SEED_ADMIN_EMAIL` | Super admin email used by the seed |
 | `SEED_ADMIN_PASSWORD` | Super admin password (at least 8 characters) |
-| `MAILTRAP_API_TOKEN` | Mailtrap sending API token (staff invites) |
+| `MAILTRAP_API_TOKEN` | Mailtrap sending API token (welcome emails and staff invites) |
 | `MAILTRAP_FROM_EMAIL` | Verified sender address |
 | `MAILTRAP_SENDER_NAME` | Optional from name, defaults to CTC Hub |
 
@@ -60,11 +61,17 @@ openssl rand -base64 32
 
 Paste that value into `AUTH_SECRET`. Restart `pnpm dev` after any env change.
 
-### Mailtrap (staff onboarding)
+Login attempts are limited to 3 attempts per email and 3 attempts per client IP
+within one minute. In production, set `TRUST_PROXY=true` only when the app is
+behind a trusted reverse proxy that overwrites `x-forwarded-for` and
+`x-real-ip`; otherwise the IP limiter intentionally uses a shared fallback
+instead of trusting spoofable headers.
 
-Only a **SUPER_ADMIN** can onboard staff. CTC Hub emails a temporary password via the [Mailtrap sending API](https://docs.mailtrap.io/developers/email-sending/transactional); the new user must reset it on first sign-in.
+### Mailtrap (welcome emails)
 
-Set these when you want invites to send. The from address must be on a verified Mailtrap sending domain.
+CTC Hub sends first-timer welcome emails and staff invitations through the [Mailtrap sending API](https://docs.mailtrap.io/developers/email-sending/transactional). Staff invitations include a temporary password that must be reset on first sign-in.
+
+Set these when you want welcome emails and invites to send. The from address must be on a verified Mailtrap sending domain.
 
 ```bash
 MAILTRAP_API_TOKEN=
@@ -72,7 +79,7 @@ MAILTRAP_FROM_EMAIL=hello@yourdomain.com
 MAILTRAP_SENDER_NAME=CTC Hub
 ```
 
-Get the token from [Mailtrap sending setup](https://mailtrap.io/api-smtp/sending-setup). If Mailtrap is missing, onboarding fails and the user is not created.
+Get the token from [Mailtrap sending setup](https://mailtrap.io/api-smtp/sending-setup). First-timer submissions with an email address attempt to send the welcome email after the record is saved; delivery failures are logged without discarding the submission. If Mailtrap is missing, staff onboarding still fails and the staff user is not created.
 
 ## Database
 

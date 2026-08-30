@@ -7,6 +7,7 @@ import {
   SOUL_STAGE,
   type FirstTimerCreatedBy,
 } from "@/lib/db/enums"
+import { sendFirstTimerWelcomeEmail } from "@/lib/mail/onboarding-email"
 import { prisma } from "@/lib/db/prisma"
 import type { firstTimerVisitorSchema } from "@/lib/validation/schemas"
 import type { z } from "zod"
@@ -37,7 +38,7 @@ export async function createFirstTimerRecord({
   await assertBranchRefs({ assignedToId, eventId, branchId })
   await assertFollowUpAssignee(assignedToId, branchId)
 
-  return prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     const created = await tx.firstTimer.create({
       data: {
         branchId,
@@ -85,4 +86,18 @@ export async function createFirstTimerRecord({
 
     return created
   })
+
+  const email = created.email?.trim().toLowerCase()
+  if (email) {
+    try {
+      await sendFirstTimerWelcomeEmail({
+        to: email,
+        firstName: created.firstName,
+      })
+    } catch (error) {
+      console.error("First-timer welcome email failed.", error)
+    }
+  }
+
+  return created
 }

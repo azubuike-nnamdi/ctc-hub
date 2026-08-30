@@ -66,6 +66,72 @@ export async function sendMemberWelcomeEmail(input: {
   })
 }
 
+export async function sendFirstTimerWelcomeEmail(input: {
+  to: string
+  firstName: string
+}) {
+  const name = escapeHtml(input.firstName)
+  const text = `Hello ${input.firstName},
+
+Thank you for worshipping with the ${CHURCH_NAME} family. We have received your details and our follow-up team will be in touch.
+
+Our vision
+${CHURCH_VISION}
+
+Our mission
+${CHURCH_MISSION}
+
+${CHURCH_NAME}`
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Welcome to ${CHURCH_NAME}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f7fb;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f7fb;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5eef5;">
+          <tr>
+            <td align="center" style="padding:28px 32px 20px;background:#000000;">
+              <img src="cid:${LOGO_CID}" alt="${escapeHtml(CHURCH_NAME)}" width="140" height="140" style="display:block;border:0;outline:none;text-decoration:none;" />
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#1A90C6;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+              <h1 style="margin:0;font-size:24px;line-height:1.3;">Welcome to the family</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;">
+              <p style="margin:0 0 16px;font-size:16px;">Hello ${name},</p>
+              <p style="margin:0 0 20px;font-size:15px;line-height:24px;">
+                Thank you for worshipping with the ${escapeHtml(CHURCH_NAME)} family. We have received your details and our follow-up team will be in touch.
+              </p>
+              <p style="margin:0 0 8px;font-size:13px;color:#5b6b7a;text-transform:uppercase;letter-spacing:0.04em;">Vision</p>
+              <p style="margin:0 0 20px;font-size:15px;line-height:24px;">${escapeHtml(CHURCH_VISION)}</p>
+              <p style="margin:0 0 8px;font-size:13px;color:#5b6b7a;text-transform:uppercase;letter-spacing:0.04em;">Mission</p>
+              <p style="margin:0;font-size:15px;line-height:24px;">${escapeHtml(CHURCH_MISSION)}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  await sendMail({
+    to: input.to,
+    subject: `Welcome to the ${CHURCH_NAME} family`,
+    text,
+    html,
+    attachments: [await logoAttachment()],
+  })
+}
+
 export async function sendFamilyWelcomeEmail(input: {
   to: string
   firstName: string
