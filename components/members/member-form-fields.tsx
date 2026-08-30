@@ -68,8 +68,20 @@ export function MemberFormFields({
         <div className="grid gap-1.5">
           <Label>Phone</Label>
           <Input
+            type="tel"
+            inputMode="numeric"
+            maxLength={11}
             aria-invalid={Boolean(form.formState.errors.phone)}
-            {...form.register("phone")}
+            {...form.register("phone", {
+              onChange: (event) => {
+                const value = event.target.value.replace(/\D/g, "").slice(0, 11)
+                event.target.value = value
+                form.setValue("phone", value, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              },
+            })}
           />
           {form.formState.errors.phone ? (
             <p className="text-xs text-destructive">
