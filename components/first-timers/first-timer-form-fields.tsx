@@ -2,13 +2,24 @@
 
 import type { ReactNode } from "react"
 import type { UseFormReturn } from "react-hook-form"
+import { format, isValid, parse } from "date-fns"
+import { CalendarDaysIcon } from "lucide-react"
+import { useRef } from "react"
 import { z } from "zod"
 
+import { Calendar } from "@/components/ui/calendar"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
 import type { HearAboutSource } from "@/lib/db/enums"
+import { cn } from "@/lib/utils"
 import {
   AGE_RANGE_LABELS,
   AGE_RANGES,
@@ -20,6 +31,9 @@ import {
   MEMBERSHIP_INTERESTS,
 } from "@/lib/utils/labels"
 import { firstTimerVisitorSchema } from "@/lib/validation/schemas"
+
+const BIRTHDAY_CALENDAR_YEAR = 2000
+const BIRTHDAY_START_YEAR = 1900
 
 export type FirstTimerVisitorValues = z.infer<typeof firstTimerVisitorSchema>
 
@@ -45,6 +59,12 @@ export function FirstTimerFormFields({
   form: UseFormReturn<FirstTimerVisitorValues>
 }) {
   const hearAboutUs = form.watch("hearAboutUs") ?? []
+  const birthday = form.watch("birthday")
+  const birthdayDate = parseBirthday(birthday)
+  const birthdayActionsRef = useRef<{
+    close: () => void
+    unmount: () => void
+  } | null>(null)
 
   function toggleSource(source: HearAboutSource, checked: boolean) {
     const next = checked
@@ -108,15 +128,59 @@ export function FirstTimerFormFields({
             <Input placeholder="Occupation" {...form.register("occupation")} />
           </Field>
           <Field
-            label="Birthday"
+            label="Date of birth"
             error={form.formState.errors.birthday?.message}
           >
-            <Input
-              placeholder="dd/mm"
-              inputMode="numeric"
-              aria-invalid={Boolean(form.formState.errors.birthday)}
-              {...form.register("birthday")}
-            />
+            <Popover actionsRef={birthdayActionsRef}>
+              <PopoverTrigger
+                type="button"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full justify-between font-normal"
+                )}
+                aria-invalid={Boolean(form.formState.errors.birthday)}
+              >
+                {birthdayDate ? format(birthdayDate, "dd/MM") : "Select date"}
+                <CalendarDaysIcon />
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  captionLayout="dropdown"
+                  startMonth={new Date(BIRTHDAY_START_YEAR, 0)}
+                  endMonth={new Date(new Date().getFullYear(), 11)}
+                  selected={birthdayDate}
+                  defaultMonth={birthdayDate}
+                  onSelect={(date) => {
+                    const value = date ? format(date, "dd/MM") : ""
+                    form.setValue("birthday", value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                    birthdayActionsRef.current?.close()
+                  }}
+                />
+                {birthdayDate ? (
+                  <div className="border-t p-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        form.setValue("birthday", "", {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                        birthdayActionsRef.current?.close()
+                      }}
+                    >
+                      Clear date
+                    </Button>
+                  </div>
+                ) : null}
+              </PopoverContent>
+            </Popover>
           </Field>
         </div>
         <ChoiceRow
@@ -243,6 +307,17 @@ function Field({
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   )
+}
+
+function parseBirthday(value?: string) {
+  if (!value) return undefined
+
+  const date = parse(
+    `${value}/${BIRTHDAY_CALENDAR_YEAR}`,
+    "dd/MM/yyyy",
+    new Date()
+  )
+  return isValid(date) ? date : undefined
 }
 
 function ChoiceRow({

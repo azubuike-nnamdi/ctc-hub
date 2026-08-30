@@ -28,7 +28,7 @@ export default async function MemberDashboardLayout({
             branches={[]}
             currentBranchId={user.branchId}
           />
-          <div className="flex-1 overflow-auto p-6">{children}</div>
+          <div className="min-w-0 flex-1 overflow-auto p-6">{children}</div>
         </SidebarInset>
       </SidebarProvider>
     </BreadcrumbLabelProvider>
