@@ -39,7 +39,7 @@ const newPasswordSchema = z
 export const memberSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  phone: z.string().min(7, "Phone is required"),
+  phone: z.string().regex(/^\d{11}$/, "Phone must be exactly 11 digits"),
   email: z.string().email("Enter a valid email address"),
   gender: z.enum(["MALE", "FEMALE"]),
   dateOfBirth: z.string().optional().or(z.literal("")),
