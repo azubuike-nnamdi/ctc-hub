@@ -101,13 +101,14 @@ Schema lives in [`prisma/schema.prisma`](prisma/schema.prisma). Seed and migrati
 1. Organization **Christ Treasure Centre**
 2. Branch **Yaba** (`slug: yaba`)
 3. A **SUPER_ADMIN** user
+4. The Yaba first-timer QR code using `NEXT_PUBLIC_APP_URL`
 
 Defaults if env vars are omitted:
 
 - Email: `admin@treasurecity.org`
 - Password: `SEED_ADMIN_PASSWORD` (set this in `.env`; login requires at least 8 characters)
 
-The seed is safe to re-run. It updates that admin’s name, password hash, role, Yaba branch, and `mustChangePassword: false`.
+The seed is safe to re-run. It updates that admin’s name, password hash, role, Yaba branch, and `mustChangePassword: false`, and refreshes the QR code for the configured app URL.
 
 After a fresh database:
 
