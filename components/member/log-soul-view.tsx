@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -44,6 +44,7 @@ export function LogSoulView() {
     resolver: zodResolver(soulWinSchema),
     defaultValues: emptyValues,
   })
+  const eventType = useWatch({ control: form.control, name: "eventType" })
 
   const mutation = useMutation({
     mutationFn: (values: Values) =>
@@ -133,7 +134,7 @@ export function LogSoulView() {
             <div className="grid gap-1.5">
               <Label>Event type</Label>
               <Select
-                value={form.watch("eventType")}
+                value={eventType}
                 onValueChange={(value) => {
                   if (value) {
                     form.setValue("eventType", value as Values["eventType"])

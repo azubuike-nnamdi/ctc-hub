@@ -2,11 +2,11 @@ import { hash } from "bcryptjs"
 
 import { emptyToNull, MemberInviteError } from "@/lib/api/errors"
 import { generateTemporaryPassword } from "@/lib/auth/password"
-import { SOUL_STAGE } from "@/lib/db/enums"
 import { prisma } from "@/lib/db/prisma"
 import { sendMemberWelcome } from "@/lib/members/from-first-timer"
 import { allocateMemberCode } from "@/lib/members/member-code"
 import { memberSoulTrackerCreate } from "@/lib/members/serialize"
+import { hasCompletedMip } from "@/lib/utils/labels"
 import type { memberSchema } from "@/lib/validation/schemas"
 import type { z } from "zod"
 
@@ -46,6 +46,12 @@ export async function inviteMember({
     firstName: data.firstName,
     lastName: data.lastName,
   })
+  if (firstTimer && !hasCompletedMip(firstTimer.soulTracker?.currentStage)) {
+    throw new MemberInviteError(
+      "This first-timer must complete MIP before becoming a member.",
+      400
+    )
+  }
   const reusableTrackerId =
     firstTimer?.soulTracker && !firstTimer.soulTracker.memberId
       ? firstTimer.soulTracker.id
@@ -92,20 +98,6 @@ export async function inviteMember({
     })
 
     if (firstTimer) {
-      if (reusableTrackerId) {
-        await tx.soulTracker.update({
-          where: { id: reusableTrackerId },
-          data: {
-            currentStage: SOUL_STAGE.MIP_COMPLETED,
-            stages: {
-              create: {
-                stage: SOUL_STAGE.MIP_COMPLETED,
-                note: "Member signup completed MIP",
-              },
-            },
-          },
-        })
-      }
       await tx.firstTimer.update({
         where: { id: firstTimer.id },
         data: { status: "MEMBER" },
@@ -156,7 +148,9 @@ async function findMatchingFirstTimer(
       email: { equals: input.email, mode: "insensitive" },
       soulTracker: { is: { memberId: null } },
     },
-    include: { soulTracker: { select: { id: true, memberId: true } } },
+    include: {
+      soulTracker: { select: { id: true, memberId: true, currentStage: true } },
+    },
     orderBy: { registeredAt: "desc" },
   })
   if (byEmail) {
@@ -171,7 +165,9 @@ async function findMatchingFirstTimer(
       lastName: { equals: input.lastName, mode: "insensitive" },
       soulTracker: { is: { memberId: null } },
     },
-    include: { soulTracker: { select: { id: true, memberId: true } } },
+    include: {
+      soulTracker: { select: { id: true, memberId: true, currentStage: true } },
+    },
     orderBy: { registeredAt: "desc" },
   })
 }

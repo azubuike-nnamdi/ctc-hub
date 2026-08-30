@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
@@ -57,6 +57,7 @@ export function EventFormSheet({
       capacity: defaultValues?.capacity ?? emptyValues.capacity,
     },
   })
+  const capacity = useWatch({ control: form.control, name: "capacity" })
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -140,7 +141,7 @@ export function EventFormSheet({
               <Input
                 id="event-capacity"
                 type="number"
-                value={form.watch("capacity") ?? ""}
+                value={capacity ?? ""}
                 onChange={(event) =>
                   form.setValue(
                     "capacity",

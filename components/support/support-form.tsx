@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query"
 import Image from "next/image"
 import Link from "next/link"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { useState } from "react"
@@ -55,7 +55,7 @@ export function SupportForm({
     },
   })
 
-  const topic = form.watch("topic")
+  const topic = useWatch({ control: form.control, name: "topic" })
 
   const mutation = useMutation({
     mutationFn: (values: Values) =>

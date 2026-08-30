@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 
@@ -66,7 +66,8 @@ export function OnboardUserSheet({
     },
   })
 
-  const role = form.watch("role")
+  const role = useWatch({ control: form.control, name: "role" })
+  const branchId = useWatch({ control: form.control, name: "branchId" })
 
   const mutation = useMutation({
     mutationFn: (values: Values) =>
@@ -181,7 +182,7 @@ export function OnboardUserSheet({
                   />
                 ) : (
                   <Select
-                    value={form.watch("branchId") ?? ""}
+                    value={branchId ?? ""}
                     onValueChange={(value) =>
                       value && form.setValue("branchId", value)
                     }
