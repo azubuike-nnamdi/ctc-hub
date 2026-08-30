@@ -1,6 +1,12 @@
 import { hash } from "bcryptjs"
 import { PrismaClient } from "@prisma/client"
 
+import {
+  generateFirstTimerQrPng,
+  loadDefaultWatermark,
+} from "../lib/first-timers/qr"
+import { getAppUrl } from "../lib/utils/app-url"
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -31,7 +37,7 @@ async function main() {
 
   const passwordHash = await hash(password, 12)
 
-  await prisma.user.upsert({
+  const admin = await prisma.user.upsert({
     where: { email },
     update: {
       passwordHash,
@@ -53,6 +59,29 @@ async function main() {
       isActive: true,
       mustChangePassword: false,
       passwordChangedAt: new Date(),
+    },
+  })
+
+  const targetUrl = `${getAppUrl()}/register/${yaba.slug}`
+  const { imagePng, watermarkPng } = await generateFirstTimerQrPng({
+    targetUrl,
+    watermarkPng: await loadDefaultWatermark(),
+  })
+
+  await prisma.branchQrCode.upsert({
+    where: { branchId: yaba.id },
+    create: {
+      branchId: yaba.id,
+      targetUrl,
+      imagePng,
+      watermarkPng,
+      createdById: admin.id,
+    },
+    update: {
+      targetUrl,
+      imagePng,
+      watermarkPng,
+      createdById: admin.id,
     },
   })
 }
