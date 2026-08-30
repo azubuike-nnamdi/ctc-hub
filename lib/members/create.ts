@@ -2,6 +2,7 @@ import { hash } from "bcryptjs"
 
 import { emptyToNull, MemberInviteError } from "@/lib/api/errors"
 import { generateTemporaryPassword } from "@/lib/auth/password"
+import { SOUL_STAGE } from "@/lib/db/enums"
 import { prisma } from "@/lib/db/prisma"
 import { sendMemberWelcome } from "@/lib/members/from-first-timer"
 import { allocateMemberCode } from "@/lib/members/member-code"
@@ -91,6 +92,20 @@ export async function inviteMember({
     })
 
     if (firstTimer) {
+      if (reusableTrackerId) {
+        await tx.soulTracker.update({
+          where: { id: reusableTrackerId },
+          data: {
+            currentStage: SOUL_STAGE.MIP_COMPLETED,
+            stages: {
+              create: {
+                stage: SOUL_STAGE.MIP_COMPLETED,
+                note: "Member signup completed MIP",
+              },
+            },
+          },
+        })
+      }
       await tx.firstTimer.update({
         where: { id: firstTimer.id },
         data: { status: "MEMBER" },

@@ -129,11 +129,11 @@ export function serializeMember(member: MemberInput): Member {
 export function memberSoulTrackerCreate(branchId: string) {
   return {
     branchId,
-    currentStage: SOUL_STAGE.FOLLOW_UP,
+    currentStage: SOUL_STAGE.MIP_COMPLETED,
     stages: {
       create: {
-        stage: SOUL_STAGE.FOLLOW_UP,
-        note: "Member discipleship journey started",
+        stage: SOUL_STAGE.MIP_COMPLETED,
+        note: "Member signup completed MIP",
       },
     },
   }
